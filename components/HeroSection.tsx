@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 export default function HeroSection() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const textRef = useRef<HTMLHeadingElement>(null);
+    const letterRefs = useRef<HTMLSpanElement[]>([]); // ✅ added for individual letters
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -114,51 +115,40 @@ export default function HeroSection() {
                 const stretch = currentLength - naturalRopeLength;
 
                 // Calculate spring force (Hooke's Law: F = -kx)
-                // Force points back toward natural length
                 const springForce = -springConstant * stretch;
                 const springForceX = springForce * (dx / currentLength);
                 const springForceY = springForce * (dy / currentLength);
 
-                // Speed increases with stretch amount
                 const stretchAmount = Math.abs(stretch);
                 const speedBoost = 1 + (stretchAmount / naturalRopeLength) * 1.5;
 
-                // Apply forces with mass consideration (F = ma, so a = F/m)
                 const accelerationX = (springForceX * speedBoost) / mass;
                 const accelerationY = (springForceY * speedBoost) / mass + gravity;
 
-                // Update velocity
                 velocityX += accelerationX;
                 velocityY += accelerationY;
 
-                // Apply damping to velocity (energy loss)
                 velocityX *= damping;
                 velocityY *= damping;
 
-                // Update position
                 bulbX += velocityX;
                 bulbY += velocityY;
 
-                // Handle boundary constraints with realistic collision
                 const newDx = bulbX - originX;
                 const newDy = bulbY - originY;
                 const newLength = Math.sqrt(newDx * newDx + newDy * newDy);
 
                 if (newLength > maxStretch) {
-                    // Hit max stretch - bounce back with reduced energy
                     const ratio = maxStretch / newLength;
                     bulbX = originX + newDx * ratio;
                     bulbY = originY + newDy * ratio;
 
-                    // Reflect velocity and lose energy
                     const normalX = newDx / newLength;
                     const normalY = newDy / newLength;
                     const dotProduct = velocityX * normalX + velocityY * normalY;
-                    velocityX -= 1.8 * dotProduct * normalX; // Reflect with energy loss
+                    velocityX -= 1.8 * dotProduct * normalX;
                     velocityY -= 1.8 * dotProduct * normalY;
-
                 } else if (newLength < minRopeLength) {
-                    // Too close to origin - push back
                     const ratio = minRopeLength / newLength;
                     bulbX = originX + newDx * ratio;
                     bulbY = originY + newDy * ratio;
@@ -170,7 +160,6 @@ export default function HeroSection() {
                     velocityY -= 1.5 * dotProduct * normalY;
                 }
 
-                // Slow down when velocity is very small (settle naturally)
                 const speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
                 if (speed < 0.1 && Math.abs(stretch) < 10) {
                     velocityX *= 0.95;
@@ -183,7 +172,7 @@ export default function HeroSection() {
             );
             const ropeStretchRatio = currentRopeLength / naturalRopeLength;
 
-            // Draw elastic rope with stretch effect
+            // Draw elastic rope
             ctx.beginPath();
             ctx.strokeStyle = isDragging ? "#FFD700" : "#888";
             ctx.lineWidth = Math.max(1.5, 4 / ropeStretchRatio);
@@ -191,11 +180,8 @@ export default function HeroSection() {
             for (let i = 0; i <= segments; i++) {
                 const t = i / segments;
                 const x = originX + (bulbX - originX) * t;
-
-                // Natural curve that reduces with stretch
                 const curveAmount = 40 / Math.pow(ropeStretchRatio, 1.2);
                 const curve = Math.sin(Math.PI * t) * curveAmount;
-
                 const y = originY + (bulbY - originY) * t + curve;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
@@ -217,7 +203,7 @@ export default function HeroSection() {
                 }
             }
 
-            // Realistic light spread with layered gradient
+            // Realistic light spread
             const glowRadius = bulbRadius * 12;
             const gradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, glowRadius);
             gradient.addColorStop(0, `rgba(255, 240, 150, ${lightIntensity * 0.9})`);
@@ -231,7 +217,7 @@ export default function HeroSection() {
             ctx.fillStyle = gradient;
             ctx.fill();
 
-            // Realistic bulb with inner glow
+            // Bulb
             ctx.beginPath();
             ctx.arc(bulbX, bulbY, bulbRadius, 0, Math.PI * 2);
             const bulbGradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, bulbRadius);
@@ -244,7 +230,7 @@ export default function HeroSection() {
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Draw filament
+            // Filament
             if (lightIntensity > 0.5) {
                 ctx.beginPath();
                 ctx.strokeStyle = `rgba(255, 255, 255, ${lightIntensity})`;
@@ -256,7 +242,7 @@ export default function HeroSection() {
                 ctx.stroke();
             }
 
-            // Text glow and color
+            // Text glow (existing)
             if (textRef.current) {
                 const textRect = textRef.current.getBoundingClientRect();
                 if (bulbY + bulbRadius > textRect.top && bulbY - bulbRadius < textRect.bottom) {
@@ -272,13 +258,38 @@ export default function HeroSection() {
                 }
             }
 
+            // ✅ NEW: Realistic per-letter glow (kept all old code)
+            letterRefs.current.forEach((span) => {
+                if (!span) return;
+                const rect = span.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dx = bulbX - cx;
+                const dy = bulbY - cy;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const maxDist = 400;
+
+                const intensity = Math.max(0, 1 - distance / maxDist) * lightIntensity;
+
+                span.style.color =
+                    intensity > 0.1
+                        ? `rgba(255,215,0,${intensity})`
+                        : `rgba(100,100,100,0.4)`;
+
+                span.style.textShadow =
+                    intensity > 0.05
+                        ? `0 0 ${20 * intensity}px rgba(255,255,150,${intensity}),
+                           0 0 ${40 * intensity}px rgba(255,255,200,${intensity * 0.7})`
+                        : "none";
+            });
+
             frame++;
             requestAnimationFrame(draw);
         }
 
         draw();
 
-        // Cleanup event listeners
+        // Cleanup
         return () => {
             canvas.removeEventListener('mousedown', handlePointerDown);
             canvas.removeEventListener('mousemove', handlePointerMove);
@@ -293,8 +304,19 @@ export default function HeroSection() {
     return (
         <section className="relative w-full h-screen bg-black flex flex-col items-center justify-center overflow-hidden">
             <canvas ref={canvasRef} className="absolute top-0 left-0" />
-            <h1 ref={textRef} className="text-[8vw] text-gray-800 font-bold tracking-widest z-10 relative pointer-events-none">
-                UJJAWAL
+            <h1
+                ref={textRef}
+                className="text-[8vw] text-gray-800 font-bold tracking-widest z-10 relative pointer-events-none"
+            >
+                {"UJJAWAL".split("").map((ch, i) => (
+                    <span
+                        key={i}
+                        ref={(el) => { if (el) letterRefs.current[i] = el; }}
+                        className="inline-block transition-all duration-75"
+                    >
+                        {ch}
+                    </span>
+                ))}
             </h1>
         </section>
     );
