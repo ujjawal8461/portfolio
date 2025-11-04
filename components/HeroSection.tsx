@@ -21,6 +21,14 @@ export default function HeroSection() {
         const maxStretch = 650;
         const minRopeLength = 150;
 
+        // Switch rope properties (half the bulb rope length)
+        const switchOriginX = canvas.width / 2 + 150; // Position to the right
+        const switchOriginY = 0;
+        const switchNaturalLength = 200; // Half of bulb rope
+        const switchMaxStretch = 325; // Half of bulb max stretch
+        const switchMinLength = 75; // Half of bulb min length
+        const switchRadius = 12; // Smaller than bulb
+
         // Realistic physics constants - balanced for natural motion
         const springConstant = 0.035; // Moderate spring force
         const damping = 0.96; // Gradual energy loss
@@ -37,12 +45,48 @@ export default function HeroSection() {
         let dragOffsetY = 0;
         let frame = 0;
 
+        // Switch rope physics
+        let switchX = switchOriginX;
+        let switchY = switchOriginY + switchNaturalLength;
+        let switchVelocityX = 0;
+        let switchVelocityY = 0;
+        let isSwitchDragging = false;
+        let switchDragOffsetX = 0;
+        let switchDragOffsetY = 0;
+
+        // Light control - now controlled by switch
+        let isLightOn = true;
+        let lightIntensity = 1.0;
+
+        // Flicker control restored
+        let isFlickering = true;
+        let flickerFrame = 0;
+        const maxFlickerFrames = 300;
+        let flickerTimer = 0;
+        const flickerInterval = () => Math.random() * 30 + 10;
+        let nextFlicker = flickerInterval();
+
         // Mouse/Touch interaction handlers
         const handlePointerDown = (e: MouseEvent | TouchEvent) => {
             e.preventDefault();
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
+            // Check switch first
+            const switchDx = clientX - switchX;
+            const switchDy = clientY - switchY;
+            const switchDistance = Math.sqrt(switchDx * switchDx + switchDy * switchDy);
+
+            if (switchDistance <= switchRadius + 30) {
+                isSwitchDragging = true;
+                switchDragOffsetX = clientX - switchX;
+                switchDragOffsetY = clientY - switchY;
+                switchVelocityX = 0;
+                switchVelocityY = 0;
+                return;
+            }
+
+            // Check bulb
             const dx = clientX - bulbX;
             const dy = clientY - bulbY;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -57,33 +101,56 @@ export default function HeroSection() {
         };
 
         const handlePointerMove = (e: MouseEvent | TouchEvent) => {
-            if (!isDragging) return;
+            if (!isDragging && !isSwitchDragging) return;
             e.preventDefault();
 
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
-            bulbX = clientX - dragOffsetX;
-            bulbY = clientY - dragOffsetY;
+            if (isSwitchDragging) {
+                switchX = clientX - switchDragOffsetX;
+                switchY = clientY - switchDragOffsetY;
 
-            // Limit stretch and prevent getting too close
-            const dx = bulbX - originX;
-            const dy = bulbY - originY;
-            const currentLength = Math.sqrt(dx * dx + dy * dy);
+                const dx = switchX - switchOriginX;
+                const dy = switchY - switchOriginY;
+                const currentLength = Math.sqrt(dx * dx + dy * dy);
 
-            if (currentLength > maxStretch) {
-                const ratio = maxStretch / currentLength;
-                bulbX = originX + dx * ratio;
-                bulbY = originY + dy * ratio;
-            } else if (currentLength < minRopeLength) {
-                const ratio = minRopeLength / currentLength;
-                bulbX = originX + dx * ratio;
-                bulbY = originY + dy * ratio;
+                if (currentLength > switchMaxStretch) {
+                    const ratio = switchMaxStretch / currentLength;
+                    switchX = switchOriginX + dx * ratio;
+                    switchY = switchOriginY + dy * ratio;
+                } else if (currentLength < switchMinLength) {
+                    const ratio = switchMinLength / currentLength;
+                    switchX = switchOriginX + dx * ratio;
+                    switchY = switchOriginY + dy * ratio;
+                }
+            } else if (isDragging) {
+                bulbX = clientX - dragOffsetX;
+                bulbY = clientY - dragOffsetY;
+
+                const dx = bulbX - originX;
+                const dy = bulbY - originY;
+                const currentLength = Math.sqrt(dx * dx + dy * dy);
+
+                if (currentLength > maxStretch) {
+                    const ratio = maxStretch / currentLength;
+                    bulbX = originX + dx * ratio;
+                    bulbY = originY + dy * ratio;
+                } else if (currentLength < minRopeLength) {
+                    const ratio = minRopeLength / currentLength;
+                    bulbX = originX + dx * ratio;
+                    bulbY = originY + dy * ratio;
+                }
             }
         };
 
         const handlePointerUp = () => {
+            // Toggle light when releasing the switch, but only after flicker completes
+            if (isSwitchDragging && !isFlickering) {
+                isLightOn = !isLightOn;
+            }
             isDragging = false;
+            isSwitchDragging = false;
         };
 
         // Add event listeners
@@ -95,17 +162,26 @@ export default function HeroSection() {
         canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
         canvas.addEventListener('touchend', handlePointerUp);
 
-        // Flicker control
-        let isFlickering = true;
-        let flickerFrame = 0;
-        const maxFlickerFrames = 300;
-        let lightIntensity = 1.0;
-        let flickerTimer = 0;
-        const flickerInterval = () => Math.random() * 30 + 10;
-        let nextFlicker = flickerInterval();
-
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Flicker logic
+            if (isFlickering) {
+                flickerTimer++;
+                if (flickerTimer >= nextFlicker) {
+                    lightIntensity = Math.random() > 0.5 ? 1.0 : 0.0;
+                    flickerTimer = 0;
+                    nextFlicker = flickerInterval();
+                }
+                flickerFrame++;
+                if (flickerFrame >= maxFlickerFrames) {
+                    isFlickering = false;
+                    lightIntensity = 1.0;
+                    isLightOn = true;
+                }
+            } else {
+                lightIntensity = isLightOn ? 1.0 : 0.0;
+            }
 
             // Realistic elastic physics with proper gravity
             if (!isDragging) {
@@ -167,6 +243,65 @@ export default function HeroSection() {
                 }
             }
 
+            // Switch rope physics (same elastic behavior)
+            if (!isSwitchDragging) {
+                const dx = switchX - switchOriginX;
+                const dy = switchY - switchOriginY;
+                const currentLength = Math.sqrt(dx * dx + dy * dy);
+                const stretch = currentLength - switchNaturalLength;
+
+                const springForce = -springConstant * stretch;
+                const springForceX = springForce * (dx / currentLength);
+                const springForceY = springForce * (dy / currentLength);
+
+                const stretchAmount = Math.abs(stretch);
+                const speedBoost = 1 + (stretchAmount / switchNaturalLength) * 1.5;
+
+                const accelerationX = (springForceX * speedBoost) / mass;
+                const accelerationY = (springForceY * speedBoost) / mass + gravity;
+
+                switchVelocityX += accelerationX;
+                switchVelocityY += accelerationY;
+
+                switchVelocityX *= damping;
+                switchVelocityY *= damping;
+
+                switchX += switchVelocityX;
+                switchY += switchVelocityY;
+
+                const newDx = switchX - switchOriginX;
+                const newDy = switchY - switchOriginY;
+                const newLength = Math.sqrt(newDx * newDx + newDy * newDy);
+
+                if (newLength > switchMaxStretch) {
+                    const ratio = switchMaxStretch / newLength;
+                    switchX = switchOriginX + newDx * ratio;
+                    switchY = switchOriginY + newDy * ratio;
+
+                    const normalX = newDx / newLength;
+                    const normalY = newDy / newLength;
+                    const dotProduct = switchVelocityX * normalX + switchVelocityY * normalY;
+                    switchVelocityX -= 1.8 * dotProduct * normalX;
+                    switchVelocityY -= 1.8 * dotProduct * normalY;
+                } else if (newLength < switchMinLength) {
+                    const ratio = switchMinLength / newLength;
+                    switchX = switchOriginX + newDx * ratio;
+                    switchY = switchOriginY + newDy * ratio;
+
+                    const normalX = newDx / newLength;
+                    const normalY = newDy / newLength;
+                    const dotProduct = switchVelocityX * normalX + switchVelocityY * normalY;
+                    switchVelocityX -= 1.5 * dotProduct * normalX;
+                    switchVelocityY -= 1.5 * dotProduct * normalY;
+                }
+
+                const speed = Math.sqrt(switchVelocityX * switchVelocityX + switchVelocityY * switchVelocityY);
+                if (speed < 0.1 && Math.abs(stretch) < 10) {
+                    switchVelocityX *= 0.95;
+                    switchVelocityY *= 0.95;
+                }
+            }
+
             const currentRopeLength = Math.sqrt(
                 (bulbX - originX) ** 2 + (bulbY - originY) ** 2
             );
@@ -188,68 +323,114 @@ export default function HeroSection() {
             }
             ctx.stroke();
 
-            // Flicker logic
-            if (isFlickering) {
-                flickerTimer++;
-                if (flickerTimer >= nextFlicker) {
-                    lightIntensity = Math.random() > 0.5 ? 1.0 : 0.0;
-                    flickerTimer = 0;
-                    nextFlicker = flickerInterval();
-                }
-                flickerFrame++;
-                if (flickerFrame >= maxFlickerFrames) {
-                    isFlickering = false;
-                    lightIntensity = 1.0;
-                }
-            }
-
-            // Realistic light spread
-            const glowRadius = bulbRadius * 12;
-            const gradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, glowRadius);
-            gradient.addColorStop(0, `rgba(255, 240, 150, ${lightIntensity * 0.9})`);
-            gradient.addColorStop(0.2, `rgba(255, 220, 120, ${lightIntensity * 0.7})`);
-            gradient.addColorStop(0.5, `rgba(255, 200, 100, ${lightIntensity * 0.4})`);
-            gradient.addColorStop(0.8, `rgba(255, 180, 80, ${lightIntensity * 0.2})`);
-            gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
+            // Draw switch rope
+            const currentSwitchLength = Math.sqrt(
+                (switchX - switchOriginX) ** 2 + (switchY - switchOriginY) ** 2
+            );
+            const switchStretchRatio = currentSwitchLength / switchNaturalLength;
 
             ctx.beginPath();
-            ctx.arc(bulbX, bulbY, glowRadius, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.fill();
+            ctx.strokeStyle = isSwitchDragging ? "#FFD700" : "#888";
+            ctx.lineWidth = Math.max(1.5, 4 / switchStretchRatio);
+
+            for (let i = 0; i <= segments; i++) {
+                const t = i / segments;
+                const x = switchOriginX + (switchX - switchOriginX) * t;
+                const curveAmount = 40 / Math.pow(switchStretchRatio, 1.2);
+                const curve = Math.sin(Math.PI * t) * curveAmount;
+                const y = switchOriginY + (switchY - switchOriginY) * t + curve;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw light glow only when intensity is high
+            if (lightIntensity > 0.5) {
+                const glowRadius = bulbRadius * 12;
+                const gradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, glowRadius);
+                gradient.addColorStop(0, `rgba(255, 240, 150, ${lightIntensity * 0.9})`);
+                gradient.addColorStop(0.2, `rgba(255, 220, 120, ${lightIntensity * 0.7})`);
+                gradient.addColorStop(0.5, `rgba(255, 200, 100, ${lightIntensity * 0.4})`);
+                gradient.addColorStop(0.8, `rgba(255, 180, 80, ${lightIntensity * 0.2})`);
+                gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
+
+                ctx.beginPath();
+                ctx.arc(bulbX, bulbY, glowRadius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
 
             // Bulb
             ctx.beginPath();
             ctx.arc(bulbX, bulbY, bulbRadius, 0, Math.PI * 2);
             const bulbGradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, bulbRadius);
-            bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${lightIntensity * 1.0})`);
-            bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${lightIntensity * 0.8})`);
-            bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${lightIntensity * 0.6})`);
+            if (lightIntensity > 0.5) {
+                bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${lightIntensity * 1.0})`);
+                bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${lightIntensity * 0.8})`);
+                bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${lightIntensity * 0.6})`);
+            } else {
+                bulbGradient.addColorStop(0, `rgba(200, 200, 200, 0.3)`);
+                bulbGradient.addColorStop(0.7, `rgba(150, 150, 150, 0.4)`);
+                bulbGradient.addColorStop(1, `rgba(100, 100, 100, 0.5)`);
+            }
             ctx.fillStyle = bulbGradient;
             ctx.fill();
-            ctx.strokeStyle = "#FFFFFF";
+            ctx.strokeStyle = lightIntensity > 0.5 ? "#FFFFFF" : "#666";
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Filament
-            if (lightIntensity > 0.5) {
-                ctx.beginPath();
-                ctx.strokeStyle = `rgba(255, 255, 255, ${lightIntensity})`;
-                ctx.lineWidth = 1;
-                ctx.moveTo(bulbX - bulbRadius * 0.4, bulbY);
-                ctx.lineTo(bulbX - bulbRadius * 0.2, bulbY - bulbRadius * 0.3);
-                ctx.lineTo(bulbX + bulbRadius * 0.2, bulbY + bulbRadius * 0.3);
-                ctx.lineTo(bulbX + bulbRadius * 0.4, bulbY);
-                ctx.stroke();
-            }
+            // Filament - always visible, color changes based on state
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = lightIntensity > 0.5 ? `rgba(255, 255, 255, ${lightIntensity})` : `rgba(150, 150, 150, 0.5)`;
+            ctx.moveTo(bulbX - bulbRadius * 0.4, bulbY);
+            ctx.lineTo(bulbX - bulbRadius * 0.2, bulbY - bulbRadius * 0.3);
+            ctx.lineTo(bulbX + bulbRadius * 0.2, bulbY + bulbRadius * 0.3);
+            ctx.lineTo(bulbX + bulbRadius * 0.4, bulbY);
+            ctx.stroke();
 
-            // Text glow (existing)
+            // Draw rope pull switch (gray metallic style for traditional look)
+            ctx.beginPath();
+            ctx.arc(switchX, switchY, switchRadius, 0, Math.PI * 2);
+
+            // Gray metallic gradient
+            const beadGradient = ctx.createRadialGradient(
+                switchX - switchRadius * 0.3,
+                switchY - switchRadius * 0.3,
+                0,
+                switchX,
+                switchY,
+                switchRadius
+            );
+            beadGradient.addColorStop(0, "#C0C0C0");
+            beadGradient.addColorStop(0.5, "#A0A0A0");
+            beadGradient.addColorStop(1, "#808080");
+            ctx.fillStyle = beadGradient;
+            ctx.fill();
+
+            // Bead outline
+            ctx.strokeStyle = "#606060";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Center hole
+            ctx.beginPath();
+            ctx.arc(switchX, switchY, switchRadius * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = "#404040";
+            ctx.fill();
+
+            // Highlight to give 3D effect
+            ctx.beginPath();
+            ctx.arc(switchX - switchRadius * 0.3, switchY - switchRadius * 0.3, switchRadius * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.fill();
+
+            // Text glow based on light state
             if (textRef.current) {
                 const textRect = textRef.current.getBoundingClientRect();
-                if (bulbY + bulbRadius > textRect.top && bulbY - bulbRadius < textRect.bottom) {
+                if (lightIntensity > 0.5 && bulbY + bulbRadius > textRect.top && bulbY - bulbRadius < textRect.bottom) {
                     const textGlow = lightIntensity * 0.6;
-                    textRef.current.style.color = lightIntensity > 0.5
-                        ? `rgba(255, 215, 0, ${lightIntensity})`
-                        : `rgba(128, 128, 128, 0.5)`;
+                    textRef.current.style.color = `rgba(255, 215, 0, ${lightIntensity})`;
                     textRef.current.style.textShadow =
                         `0 0 20px rgba(255,255,150,${textGlow}), 0 0 40px rgba(255,255,150,${textGlow * 0.7})`;
                 } else {
@@ -258,7 +439,7 @@ export default function HeroSection() {
                 }
             }
 
-            // ✅ NEW: Realistic per-letter glow (kept all old code)
+            // Per-letter glow based on light state
             letterRefs.current.forEach((span) => {
                 if (!span) return;
                 const rect = span.getBoundingClientRect();
