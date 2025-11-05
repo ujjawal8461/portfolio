@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 export default function HeroSection() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const textRef = useRef<HTMLHeadingElement>(null);
-    const letterRefs = useRef<HTMLSpanElement[]>([]); // ✅ added for individual letters
+    const letterRefs = useRef<HTMLSpanElement[]>([]); // added for individual letters
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -58,13 +58,12 @@ export default function HeroSection() {
         let isLightOn = true;
         let lightIntensity = 1.0;
 
-        // Flicker control restored
-        let isFlickering = true;
-        let flickerFrame = 0;
-        const maxFlickerFrames = 300;
+        // Flicker control - ONLY ON FIRST LOAD, 1.2-2.2 sec, chaotic bursts
+        let hasFlickered = false;
+        let flickerActive = true;
         let flickerTimer = 0;
-        const flickerInterval = () => Math.random() * 30 + 10;
-        let nextFlicker = flickerInterval();
+        const flickerDurationFrames = 72 + Math.floor(Math.random() * 60); // 1.2-2.2 sec
+        let burstCountdown = 0;
 
         // Mouse/Touch interaction handlers
         const handlePointerDown = (e: MouseEvent | TouchEvent) => {
@@ -145,9 +144,10 @@ export default function HeroSection() {
         };
 
         const handlePointerUp = () => {
-            // Toggle light when releasing the switch, but only after flicker completes
-            if (isSwitchDragging && !isFlickering) {
+            // Toggle light when releasing the switch
+            if (isSwitchDragging) {
                 isLightOn = !isLightOn;
+                // NO flicker on toggle - only first load
             }
             isDragging = false;
             isSwitchDragging = false;
@@ -165,19 +165,21 @@ export default function HeroSection() {
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Flicker logic
-            if (isFlickering) {
+            // Flicker logic - ONLY ON FIRST LOAD
+            if (isLightOn && flickerActive && !hasFlickered) {
                 flickerTimer++;
-                if (flickerTimer >= nextFlicker) {
-                    lightIntensity = Math.random() > 0.5 ? 1.0 : 0.0;
-                    flickerTimer = 0;
-                    nextFlicker = flickerInterval();
-                }
-                flickerFrame++;
-                if (flickerFrame >= maxFlickerFrames) {
-                    isFlickering = false;
+                if (flickerTimer >= flickerDurationFrames) {
+                    flickerActive = false;
+                    hasFlickered = true;
                     lightIntensity = 1.0;
-                    isLightOn = true;
+                } else {
+                    burstCountdown--;
+                    if (burstCountdown <= 0) {
+                        lightIntensity = 0.6 + Math.random() * 0.5;
+                        burstCountdown = 1 + Math.floor(Math.random() * 4);
+                    } else {
+                        lightIntensity = 0.1 + Math.random() * 0.3;
+                    }
                 }
             } else {
                 lightIntensity = isLightOn ? 1.0 : 0.0;
