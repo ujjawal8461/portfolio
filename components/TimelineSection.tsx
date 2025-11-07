@@ -15,48 +15,48 @@ export default function CircuitTimeline() {
             title: "Born",
             location: "Indore",
             date: "11-12-2002",
-            x: 0.2,
-            y: 0.1
+            x: 0.15,
+            y: 0.08
         },
         {
             id: 2,
             year: "2018",
             title: "10th Grade",
             location: "Sarafa Vidya Niketan",
-            x: 0.35,
-            y: 0.25
+            x: 0.5,
+            y: 0.22
         },
         {
             id: 3,
             year: "2020",
             title: "12th Grade",
             location: "Sarafa Vidya Niketan",
-            x: 0.5,
-            y: 0.35
+            x: 0.85,
+            y: 0.36
         },
         {
             id: 4,
             year: "2020-2024",
             title: "B.Tech Computer Science",
             location: "CDGI, Indore",
-            x: 0.3,
-            y: 0.52
+            x: 0.2,
+            y: 0.54
         },
         {
             id: 5,
             year: "2022",
             title: "Web Developer Intern",
             location: "Physics Wallah",
-            x: 0.55,
-            y: 0.65
+            x: 0.65,
+            y: 0.7
         },
         {
             id: 6,
             year: "2024",
             title: "Junior Developer",
             location: "Dexbytes Infotech",
-            x: 0.75,
-            y: 0.82
+            x: 0.85,
+            y: 0.88
         }
     ];
 
@@ -181,9 +181,9 @@ export default function CircuitTimeline() {
                 accumulatedLength += segmentLengths[i];
             }
 
-            // Draw inactive path
+            // Draw inactive path - matching HeroSection gray
             ctx.beginPath();
-            ctx.strokeStyle = "#1a1a1a";
+            ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";
             ctx.lineWidth = 5;
             pathPoints.forEach((point, i) => {
                 if (i === 0) ctx.moveTo(point.x, point.y);
@@ -191,13 +191,13 @@ export default function CircuitTimeline() {
             });
             ctx.stroke();
 
-            // Draw activated path
+            // Draw activated path with glow
             if (scrollProgress > 0) {
                 ctx.beginPath();
                 ctx.strokeStyle = "#FFD700";
                 ctx.lineWidth = 5;
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = "rgba(255, 215, 0, 0.6)";
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
 
                 ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
 
@@ -245,15 +245,16 @@ export default function CircuitTimeline() {
                     const pulseTime = Date.now() / 1000;
                     const pulse = Math.sin(pulseTime * 2 + index) * 0.2 + 0.8;
 
+                    // Outer glow rings with higher opacity
                     ctx.beginPath();
                     ctx.arc(x, y, 26, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(255, 215, 0, ${0.2 * pulse})`;
+                    ctx.strokeStyle = `rgba(255, 215, 0, ${0.4 * pulse})`;
                     ctx.lineWidth = 2;
                     ctx.stroke();
 
                     ctx.beginPath();
                     ctx.arc(x, y, 38, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(255, 215, 0, ${0.1 * pulse})`;
+                    ctx.strokeStyle = `rgba(255, 215, 0, ${0.25 * pulse})`;
                     ctx.lineWidth = 1;
                     ctx.stroke();
                 }
@@ -265,8 +266,8 @@ export default function CircuitTimeline() {
                     const pulseTime = Date.now() / 1000;
                     const pulse = Math.sin(pulseTime * 2 + index) * 0.2 + 0.8;
 
-                    ctx.shadowBlur = 30 * pulse;
-                    ctx.shadowColor = "#FFD700";
+                    ctx.shadowBlur = 40 * pulse;
+                    ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
 
                     const gradient = ctx.createRadialGradient(x - 4, y - 4, 0, x, y, 18);
                     gradient.addColorStop(0, "#FFF");
@@ -280,24 +281,25 @@ export default function CircuitTimeline() {
                     ctx.stroke();
                     ctx.shadowBlur = 0;
                 } else {
-                    ctx.fillStyle = "#0a0a0a";
+                    // Inactive node - matching HeroSection gray
+                    ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
                     ctx.fill();
-                    ctx.strokeStyle = "#2a2a2a";
+                    ctx.strokeStyle = "rgba(100, 100, 100, 0.5)";
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
 
-                ctx.strokeStyle = milestoneReached ? "rgba(255, 215, 0, 0.35)" : "rgba(80, 80, 80, 0.4)";
+                ctx.strokeStyle = milestoneReached ? "rgba(255, 215, 0, 0.4)" : "rgba(128, 128, 128, 0.4)";
                 ctx.lineWidth = 1;
                 ctx.strokeRect(x - 12, y - 12, 24, 24);
             });
 
-            // Energy particle
+            // Energy particle with enhanced glow
             if (scrollProgress > 0 && scrollProgress < 1) {
                 const gradient = ctx.createRadialGradient(particleX, particleY, 0, particleX, particleY, 50);
-                gradient.addColorStop(0, "rgba(255, 255, 255, 0.95)");
-                gradient.addColorStop(0.3, "rgba(255, 215, 0, 0.7)");
-                gradient.addColorStop(0.7, "rgba(255, 180, 0, 0.3)");
+                gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+                gradient.addColorStop(0.3, "rgba(255, 215, 0, 0.9)");
+                gradient.addColorStop(0.7, "rgba(255, 180, 0, 0.5)");
                 gradient.addColorStop(1, "rgba(255, 160, 60, 0)");
 
                 ctx.beginPath();
@@ -308,8 +310,8 @@ export default function CircuitTimeline() {
                 ctx.beginPath();
                 ctx.arc(particleX, particleY, 10, 0, Math.PI * 2);
                 ctx.fillStyle = "#FFF";
-                ctx.shadowBlur = 25;
-                ctx.shadowColor = "#FFD700";
+                ctx.shadowBlur = 35;
+                ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
                 ctx.fill();
                 ctx.shadowBlur = 0;
             }
@@ -359,7 +361,7 @@ export default function CircuitTimeline() {
                             let textOffset = 50;
 
                             // Adjust positioning for specific milestones to avoid overlap
-                            if (milestone.x < 0.35) {
+                            if (milestone.x < 0.4) {
                                 textLeft = textLeft - 260; // Left side
                             } else {
                                 textLeft = textLeft + textOffset; // Right side
