@@ -8,6 +8,10 @@ export default function CircuitTimeline() {
     const [scrollProgress, setScrollProgress] = useState(0);
     const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 900 });
 
+    // Track switch states manually
+    const switchStatesRef = useRef<boolean[]>([true, true, true, true, true]);
+    const [renderTrigger, setRenderTrigger] = useState(0);
+
     const milestones = [
         {
             id: 1,
@@ -16,7 +20,7 @@ export default function CircuitTimeline() {
             location: "Indore",
             date: "11-12-2002",
             x: 0.15,
-            y: 0.08
+            y: 0.08,
         },
         {
             id: 2,
@@ -60,47 +64,101 @@ export default function CircuitTimeline() {
         }
     ];
 
-    // Create complex circuit path matching the ASCII diagram
     const createCircuitPath = () => {
         const points: { x: number; y: number }[] = [];
         const w = canvasSize.width;
         const h = canvasSize.height;
 
-        // Start at milestone 1 (Born)
         const m1 = { x: milestones[0].x * w, y: milestones[0].y * h };
         points.push(m1);
-
-        // Go down to milestone 2 level
         points.push({ x: m1.x, y: milestones[1].y * h });
 
-        // Go right to milestone 2 (10th)
         const m2 = { x: milestones[1].x * w, y: milestones[1].y * h };
         points.push(m2);
-
-        // Go down a bit then right to milestone 3 (12th)
         points.push({ x: m2.x, y: milestones[2].y * h });
+
         const m3 = { x: milestones[2].x * w, y: milestones[2].y * h };
         points.push(m3);
 
-        // Go down and then LEFT to milestone 4 (B.Tech) - this creates the backwards flow
         const m4Y = milestones[3].y * h;
         points.push({ x: m3.x, y: m4Y });
         const m4 = { x: milestones[3].x * w, y: m4Y };
         points.push(m4);
 
-        // From B.Tech, go down and then RIGHT to milestone 5 (Intern)
         const m5Y = milestones[4].y * h;
         points.push({ x: m4.x, y: m5Y });
         const m5 = { x: milestones[4].x * w, y: m5Y };
         points.push(m5);
 
-        // From Intern, go down and then RIGHT to milestone 6 (Junior Dev)
         const m6Y = milestones[5].y * h;
         points.push({ x: m5.x, y: m6Y });
         const m6 = { x: milestones[5].x * w, y: m6Y };
         points.push(m6);
 
         return points;
+    };
+
+    // Calculate switch positions (midpoints between milestones)
+    const getSwitchPositions = () => {
+        const switches = [];
+        const pathPoints = createCircuitPath();
+
+        let totalLength = 0;
+        const segmentLengths: number[] = [];
+        for (let i = 1; i < pathPoints.length; i++) {
+            const dx = pathPoints[i].x - pathPoints[i - 1].x;
+            const dy = pathPoints[i].y - pathPoints[i - 1].y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            segmentLengths.push(length);
+            totalLength += length;
+        }
+
+        const milestonePositions: number[] = [];
+        for (let m = 0; m < milestones.length; m++) {
+            const mx = milestones[m].x * canvasSize.width;
+            const my = milestones[m].y * canvasSize.height;
+
+            let accLength = 0;
+            for (let i = 0; i < pathPoints.length; i++) {
+                const dx = Math.abs(pathPoints[i].x - mx);
+                const dy = Math.abs(pathPoints[i].y - my);
+                if (dx < 10 && dy < 10) {
+                    for (let j = 0; j < i && j < segmentLengths.length; j++) {
+                        accLength += segmentLengths[j];
+                    }
+                    milestonePositions.push(accLength / totalLength);
+                    break;
+                }
+            }
+        }
+
+        for (let i = 0; i < milestonePositions.length - 1; i++) {
+            const midProgress = (milestonePositions[i] + milestonePositions[i + 1]) / 2;
+
+            let accLength = 0;
+            const targetLength = midProgress * totalLength;
+            let switchX = pathPoints[0].x;
+            let switchY = pathPoints[0].y;
+
+            for (let j = 0; j < segmentLengths.length; j++) {
+                if (accLength + segmentLengths[j] >= targetLength) {
+                    const segProgress = (targetLength - accLength) / segmentLengths[j];
+                    switchX = pathPoints[j].x + (pathPoints[j + 1].x - pathPoints[j].x) * segProgress;
+                    switchY = pathPoints[j].y + (pathPoints[j + 1].y - pathPoints[j].y) * segProgress;
+                    break;
+                }
+                accLength += segmentLengths[j];
+            }
+
+            switches.push({
+                id: i,
+                x: switchX,
+                y: switchY,
+                progress: midProgress
+            });
+        }
+
+        return switches;
     };
 
     useEffect(() => {
@@ -142,6 +200,27 @@ export default function CircuitTimeline() {
             }
         };
 
+        const handleCanvasClick = (e: MouseEvent) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (parseInt(canvas.style.width) / rect.width);
+            const clickY = (e.clientY - rect.top) * (parseInt(canvas.style.height) / rect.height);
+
+            const switches = getSwitchPositions();
+            switches.forEach((sw) => {
+                const dx = clickX - sw.x;
+                const dy = clickY - sw.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance <= 30) {
+                    switchStatesRef.current[sw.id] = !switchStatesRef.current[sw.id];
+                    setRenderTrigger(prev => prev + 1);
+                }
+            });
+        };
+
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.style.cursor = 'pointer';
+
         handleScroll();
         window.addEventListener("scroll", handleScroll);
         window.addEventListener("resize", resizeCanvas);
@@ -166,7 +245,46 @@ export default function CircuitTimeline() {
                 totalLength += length;
             }
 
-            const currentLength = scrollProgress * totalLength;
+            const switches = getSwitchPositions();
+
+            // Find first disabled switch and the node before it
+            let firstDisabledSwitchProgress = 1;
+            let stopAtNodeProgress = 1;
+
+            for (let i = 0; i < switches.length; i++) {
+                if (!switchStatesRef.current[i]) {
+                    firstDisabledSwitchProgress = switches[i].progress;
+
+                    // Find the milestone that comes before this switch
+                    for (let m = milestones.length - 1; m >= 0; m--) {
+                        const mx = milestones[m].x * canvasSize.width;
+                        const my = milestones[m].y * canvasSize.height;
+
+                        let milestoneLength = 0;
+                        for (let p = 0; p < pathPoints.length; p++) {
+                            const dx = Math.abs(pathPoints[p].x - mx);
+                            const dy = Math.abs(pathPoints[p].y - my);
+                            if (dx < 10 && dy < 10) {
+                                for (let j = 0; j < p && j < segmentLengths.length; j++) {
+                                    milestoneLength += segmentLengths[j];
+                                }
+                                const milestoneProgress = milestoneLength / totalLength;
+
+                                if (milestoneProgress < firstDisabledSwitchProgress) {
+                                    stopAtNodeProgress = milestoneProgress;
+                                    break;
+                                }
+                            }
+                        }
+                        if (stopAtNodeProgress < 1) break;
+                    }
+                    break;
+                }
+            }
+
+            const effectiveProgress = Math.min(scrollProgress, stopAtNodeProgress);
+            const currentLength = effectiveProgress * totalLength;
+
             let accumulatedLength = 0;
             let particleX = pathPoints[0].x;
             let particleY = pathPoints[0].y;
@@ -181,45 +299,178 @@ export default function CircuitTimeline() {
                 accumulatedLength += segmentLengths[i];
             }
 
-            // Draw inactive path - matching HeroSection gray
-            ctx.beginPath();
-            ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";
+            // Draw path segments with gaps at OFF switches
             ctx.lineWidth = 5;
-            pathPoints.forEach((point, i) => {
-                if (i === 0) ctx.moveTo(point.x, point.y);
-                else ctx.lineTo(point.x, point.y);
-            });
-            ctx.stroke();
 
-            // Draw activated path with glow
-            if (scrollProgress > 0) {
-                ctx.beginPath();
+            // First, draw all inactive segments
+            for (let i = 0; i < pathPoints.length - 1; i++) {
+                let segStart = 0;
+                for (let j = 0; j < i; j++) {
+                    segStart += segmentLengths[j];
+                }
+                const segEnd = segStart + segmentLengths[i];
+                const segProgress = segStart / totalLength;
+
+                // Check if this segment should have a gap (if there's an OFF switch on it)
+                let hasOffSwitch = false;
+                let gapStart = 0;
+                let gapEnd = 0;
+
+                for (let s = 0; s < switches.length; s++) {
+                    if (!switchStatesRef.current[s]) {
+                        const swPos = switches[s].progress * totalLength;
+                        if (swPos >= segStart && swPos <= segEnd) {
+                            hasOffSwitch = true;
+                            const localProgress = (swPos - segStart) / segmentLengths[i];
+                            const gapSize = 25; // pixels
+                            gapStart = localProgress - (gapSize / 2) / segmentLengths[i];
+                            gapEnd = localProgress + (gapSize / 2) / segmentLengths[i];
+                            break;
+                        }
+                    }
+                }
+
+                if (hasOffSwitch) {
+                    // Draw segment before gap
+                    if (gapStart > 0) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = "#888";
+                        ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
+                        const gapX1 = pathPoints[i].x + (pathPoints[i + 1].x - pathPoints[i].x) * gapStart;
+                        const gapY1 = pathPoints[i].y + (pathPoints[i + 1].y - pathPoints[i].y) * gapStart;
+                        ctx.lineTo(gapX1, gapY1);
+                        ctx.stroke();
+                    }
+
+                    // Draw segment after gap
+                    if (gapEnd < 1) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = "#888";
+                        const gapX2 = pathPoints[i].x + (pathPoints[i + 1].x - pathPoints[i].x) * gapEnd;
+                        const gapY2 = pathPoints[i].y + (pathPoints[i + 1].y - pathPoints[i].y) * gapEnd;
+                        ctx.moveTo(gapX2, gapY2);
+                        ctx.lineTo(pathPoints[i + 1].x, pathPoints[i + 1].y);
+                        ctx.stroke();
+                    }
+                } else {
+                    // Draw full segment
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#888";
+                    ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
+                    ctx.lineTo(pathPoints[i + 1].x, pathPoints[i + 1].y);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw activated path with glow (stops at OFF switches)
+            if (effectiveProgress > 0) {
                 ctx.strokeStyle = "#FFD700";
                 ctx.lineWidth = 5;
                 ctx.shadowBlur = 30;
                 ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
 
-                ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
-
                 let drawLength = 0;
                 for (let i = 0; i < segmentLengths.length; i++) {
-                    if (drawLength + segmentLengths[i] <= currentLength) {
+                    let segStart = 0;
+                    for (let j = 0; j < i; j++) {
+                        segStart += segmentLengths[j];
+                    }
+                    const segEnd = segStart + segmentLengths[i];
+
+                    // Check for OFF switch on this segment
+                    let switchOnSegment = -1;
+                    for (let s = 0; s < switches.length; s++) {
+                        if (!switchStatesRef.current[s]) {
+                            const swPos = switches[s].progress * totalLength;
+                            if (swPos >= segStart && swPos <= segEnd) {
+                                switchOnSegment = s;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (switchOnSegment !== -1 && drawLength < currentLength) {
+                        // Draw up to the switch, then stop
+                        const swPos = switches[switchOnSegment].progress * totalLength;
+                        const drawToSwitch = Math.min(currentLength, swPos - 12.5);
+
+                        if (drawToSwitch > drawLength) {
+                            ctx.beginPath();
+                            ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
+
+                            const localProgress = (drawToSwitch - segStart) / segmentLengths[i];
+                            const x = pathPoints[i].x + (pathPoints[i + 1].x - pathPoints[i].x) * localProgress;
+                            const y = pathPoints[i].y + (pathPoints[i + 1].y - pathPoints[i].y) * localProgress;
+                            ctx.lineTo(x, y);
+                            ctx.stroke();
+                        }
+                        break;
+                    } else if (drawLength + segmentLengths[i] <= currentLength) {
+                        ctx.beginPath();
+                        ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
                         ctx.lineTo(pathPoints[i + 1].x, pathPoints[i + 1].y);
+                        ctx.stroke();
                         drawLength += segmentLengths[i];
                     } else {
+                        ctx.beginPath();
                         const segmentProgress = (currentLength - drawLength) / segmentLengths[i];
                         const x = pathPoints[i].x + (pathPoints[i + 1].x - pathPoints[i].x) * segmentProgress;
                         const y = pathPoints[i].y + (pathPoints[i + 1].y - pathPoints[i].y) * segmentProgress;
+                        ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
                         ctx.lineTo(x, y);
+                        ctx.stroke();
                         break;
                     }
                 }
 
-                ctx.stroke();
                 ctx.shadowBlur = 0;
             }
 
-            // Draw nodes
+            // Draw switches - circuit diagram style with proper wire thickness
+            switches.forEach((sw) => {
+                const isOn = switchStatesRef.current[sw.id];
+                const circleRadius = 8;
+                const lineLength = 20;
+
+                // Left circle (hollow)
+                ctx.beginPath();
+                ctx.arc(sw.x - lineLength, sw.y, circleRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = "#888";
+                ctx.lineWidth = 3;
+                ctx.fillStyle = "#000";
+                ctx.fill();
+                ctx.stroke();
+
+                // Right circle (hollow)
+                ctx.beginPath();
+                ctx.arc(sw.x + lineLength, sw.y, circleRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = "#888";
+                ctx.lineWidth = 3;
+                ctx.fillStyle = "#000";
+                ctx.fill();
+                ctx.stroke();
+
+                // Switch lever line - same thickness as wire (5px)
+                if (isOn) {
+                    // Horizontal line when ON - matches wire thickness
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#888";
+                    ctx.lineWidth = 5;
+                    ctx.moveTo(sw.x - lineLength, sw.y);
+                    ctx.lineTo(sw.x + lineLength, sw.y);
+                    ctx.stroke();
+                } else {
+                    // Angled line when OFF - showing gap/disconnection
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#888";
+                    ctx.lineWidth = 5;
+                    ctx.moveTo(sw.x - lineLength, sw.y);
+                    ctx.lineTo(sw.x + lineLength - 8, sw.y - 18);
+                    ctx.stroke();
+                }
+            });
+
+            // Draw nodes with bulb-like glow
             milestones.forEach((milestone, index) => {
                 const x = milestone.x * canvasSize.width;
                 const y = milestone.y * canvasSize.height;
@@ -241,50 +492,56 @@ export default function CircuitTimeline() {
                     }
                 }
 
+                const nodeRadius = 18;
+
                 if (milestoneReached) {
                     const pulseTime = Date.now() / 1000;
-                    const pulse = Math.sin(pulseTime * 2 + index) * 0.2 + 0.8;
+                    const pulse = Math.sin(pulseTime * 2 + index) * 0.15 + 0.85;
 
-                    // Outer glow rings with higher opacity
-                    ctx.beginPath();
-                    ctx.arc(x, y, 26, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(255, 215, 0, ${0.4 * pulse})`;
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
+                    // Large outer glow
+                    const glowRadius = nodeRadius * 8;
+                    const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
+                    gradient.addColorStop(0, `rgba(255, 240, 150, ${pulse * 0.5})`);
+                    gradient.addColorStop(0.2, `rgba(255, 220, 120, ${pulse * 0.4})`);
+                    gradient.addColorStop(0.5, `rgba(255, 200, 100, ${pulse * 0.25})`);
+                    gradient.addColorStop(0.8, `rgba(255, 180, 80, ${pulse * 0.1})`);
+                    gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
 
                     ctx.beginPath();
-                    ctx.arc(x, y, 38, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(255, 215, 0, ${0.25 * pulse})`;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
+                    ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
                 }
 
+                // Main node circle
                 ctx.beginPath();
-                ctx.arc(x, y, 18, 0, Math.PI * 2);
+                ctx.arc(x, y, nodeRadius, 0, Math.PI * 2);
 
                 if (milestoneReached) {
                     const pulseTime = Date.now() / 1000;
                     const pulse = Math.sin(pulseTime * 2 + index) * 0.2 + 0.8;
+
+                    const bulbGradient = ctx.createRadialGradient(x, y, 0, x, y, nodeRadius);
+                    bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${pulse * 1.0})`);
+                    bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${pulse * 0.8})`);
+                    bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${pulse * 0.6})`);
+                    ctx.fillStyle = bulbGradient;
+                    ctx.fill();
 
                     ctx.shadowBlur = 40 * pulse;
                     ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
-
-                    const gradient = ctx.createRadialGradient(x - 4, y - 4, 0, x, y, 18);
-                    gradient.addColorStop(0, "#FFF");
-                    gradient.addColorStop(0.4, "#FFD700");
-                    gradient.addColorStop(1, "#FFA500");
-                    ctx.fillStyle = gradient;
-                    ctx.fill();
-
-                    ctx.strokeStyle = "#FFF";
-                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = "#FFFFFF";
+                    ctx.lineWidth = 2;
                     ctx.stroke();
                     ctx.shadowBlur = 0;
                 } else {
-                    // Inactive node - matching HeroSection gray
-                    ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
+                    const inactiveGradient = ctx.createRadialGradient(x, y, 0, x, y, nodeRadius);
+                    inactiveGradient.addColorStop(0, `rgba(200, 200, 200, 0.3)`);
+                    inactiveGradient.addColorStop(0.7, `rgba(150, 150, 150, 0.4)`);
+                    inactiveGradient.addColorStop(1, `rgba(100, 100, 100, 0.5)`);
+                    ctx.fillStyle = inactiveGradient;
                     ctx.fill();
-                    ctx.strokeStyle = "rgba(100, 100, 100, 0.5)";
+                    ctx.strokeStyle = "#666";
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
@@ -294,8 +551,8 @@ export default function CircuitTimeline() {
                 ctx.strokeRect(x - 12, y - 12, 24, 24);
             });
 
-            // Energy particle with enhanced glow
-            if (scrollProgress > 0 && scrollProgress < 1) {
+            // Energy particle
+            if (effectiveProgress > 0 && effectiveProgress < 1) {
                 const gradient = ctx.createRadialGradient(particleX, particleY, 0, particleX, particleY, 50);
                 gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
                 gradient.addColorStop(0.3, "rgba(255, 215, 0, 0.9)");
@@ -324,9 +581,27 @@ export default function CircuitTimeline() {
         return () => {
             window.removeEventListener("scroll", handleScroll);
             window.removeEventListener("resize", resizeCanvas);
+            canvas.removeEventListener('click', handleCanvasClick);
             cancelAnimationFrame(animationFrame);
         };
-    }, [scrollProgress, canvasSize.width, canvasSize.height]);
+    }, [scrollProgress, canvasSize.width, canvasSize.height, renderTrigger]);
+
+    // Calculate if milestone should be active based on switches
+    const isMilestoneActive = (index: number) => {
+        const switches = getSwitchPositions();
+        const milestoneProgress = index / (milestones.length - 1);
+
+        // Check if any switch before this milestone is off
+        for (let i = 0; i < switches.length; i++) {
+            if (switches[i].progress < milestoneProgress * 0.95) {
+                if (!switchStatesRef.current[i]) {
+                    return false;
+                }
+            }
+        }
+
+        return scrollProgress >= milestoneProgress * 0.95;
+    };
 
     return (
         <section
@@ -336,9 +611,9 @@ export default function CircuitTimeline() {
         >
             <div className="sticky top-0 h-screen overflow-hidden flex flex-col items-center justify-center py-8">
                 <h2
-                    className="text-center text-5xl md:text-6xl font-bold mb-8 tracking-[0.25em] uppercase"
+                    className="text-center text-5xl md:text-6xl font-bold mb-12 tracking-[0.25em] uppercase"
                     style={{
-                        color: scrollProgress > 0.05 ? "#FFD700" : "rgba(128, 128, 128, 0.5)",
+                        color: scrollProgress > 0.05 ? "#FFD700" : "#888",
                         textShadow: scrollProgress > 0.05 ? "0 0 50px rgba(255,215,0,0.5)" : "none",
                         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
                         fontFamily: "system-ui, -apple-system, sans-serif"
@@ -352,19 +627,15 @@ export default function CircuitTimeline() {
                         <canvas ref={canvasRef} />
 
                         {milestones.map((milestone, index) => {
-                            const milestoneProgress = index / (milestones.length - 1);
-                            const isActive = scrollProgress >= milestoneProgress * 0.95;
-                            const intensity = isActive ? Math.min(1, (scrollProgress - milestoneProgress * 0.95) * 10) : 0;
+                            const isActive = isMilestoneActive(index);
+                            const intensity = isActive ? 1 : 0;
 
-                            // Position text based on milestone location
                             let textLeft = milestone.x * canvasSize.width;
-                            let textOffset = 50;
 
-                            // Adjust positioning for specific milestones to avoid overlap
                             if (milestone.x < 0.4) {
-                                textLeft = textLeft - 260; // Left side
+                                textLeft = textLeft - 260;
                             } else {
-                                textLeft = textLeft + textOffset; // Right side
+                                textLeft = textLeft + 50;
                             }
 
                             return (
@@ -374,7 +645,7 @@ export default function CircuitTimeline() {
                                     style={{
                                         left: `${textLeft}px`,
                                         top: `${milestone.y * canvasSize.height - 25}px`,
-                                        opacity: isActive ? 1 : 0.3,
+                                        // opacity: isActive ? 1 : 0.3,
                                         transition: "opacity 0.4s ease",
                                         width: "240px"
                                     }}
@@ -383,7 +654,7 @@ export default function CircuitTimeline() {
                                         <span
                                             className="text-xl font-bold tracking-wider mb-1"
                                             style={{
-                                                color: isActive ? `rgba(255, 215, 0, ${intensity})` : "rgba(128, 128, 128, 0.5)",
+                                                color: isActive ? `rgba(255, 215, 0, ${intensity})` : "#888",
                                                 textShadow: isActive ? `0 0 ${20 * intensity}px rgba(255,255,150,${intensity * 0.6}), 0 0 ${40 * intensity}px rgba(255,255,150,${intensity * 0.7})` : "none",
                                                 fontFamily: "system-ui, -apple-system, sans-serif",
                                                 transition: "all 0.3s ease"
@@ -394,7 +665,7 @@ export default function CircuitTimeline() {
                                         <span
                                             className="text-base font-semibold mb-1"
                                             style={{
-                                                color: isActive ? `rgba(255, 240, 180, ${0.95 * intensity})` : "rgba(100, 100, 100, 0.4)",
+                                                color: isActive ? `rgba(255, 240, 180, ${0.95 * intensity})` : "#888",
                                                 transition: "all 0.3s ease",
                                                 lineHeight: "1.3"
                                             }}
@@ -404,7 +675,7 @@ export default function CircuitTimeline() {
                                         <span
                                             className="text-sm"
                                             style={{
-                                                color: isActive ? `rgba(180, 180, 180, ${0.85 + intensity * 0.15})` : "rgba(80, 80, 80, 0.4)",
+                                                color: isActive ? `rgba(180, 180, 180, ${0.85 + intensity * 0.15})` : "#888",
                                                 transition: "all 0.3s ease",
                                                 lineHeight: "1.4"
                                             }}
@@ -415,7 +686,7 @@ export default function CircuitTimeline() {
                                             <span
                                                 className="text-xs mt-1"
                                                 style={{
-                                                    color: isActive ? `rgba(150, 150, 150, ${0.75 + intensity * 0.25})` : "rgba(70, 70, 70, 0.4)",
+                                                    color: isActive ? `rgba(150, 150, 150, ${0.75 + intensity * 0.25})` : "#888",
                                                     transition: "all 0.3s ease"
                                                 }}
                                             >
@@ -430,15 +701,15 @@ export default function CircuitTimeline() {
                 </div>
 
                 <div
-                    className="text-center text-xs tracking-[0.35em] uppercase mt-4"
+                    className="text-center text-xs tracking-[0.35em] uppercase mt-6"
                     style={{
                         color: scrollProgress < 0.95 ? "#555" : "#222",
-                        opacity: scrollProgress < 0.95 ? 0.7 : 0,
+                        //opacity: scrollProgress < 0.95 ? 0.7 : 0,
                         transition: "all 0.5s ease",
                         fontFamily: "system-ui, -apple-system, sans-serif"
                     }}
                 >
-                    Scroll to energize the circuit
+                    Scroll to energize • Click switches to control circuit
                 </div>
             </div>
         </section>
