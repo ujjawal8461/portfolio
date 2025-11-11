@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 export default function HeroSection() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const textRef = useRef<HTMLHeadingElement>(null);
+    const subTextRef = useRef<HTMLParagraphElement>(null);
     const letterRefs = useRef<HTMLSpanElement[]>([]); // added for individual letters
 
     useEffect(() => {
@@ -429,6 +430,18 @@ export default function HeroSection() {
 
             // Text glow based on light state
             if (textRef.current) {
+                // Handle subTextRef glow and fade timing
+                if (subTextRef.current) {
+                    if (lightIntensity > 0.5) {
+                        setTimeout(() => { subTextRef.current!.style.opacity = "1"; }, 1500);
+                        subTextRef.current.style.color = `rgba(255, 215, 0, ${lightIntensity})`;
+                        subTextRef.current.style.textShadow = `0 0 15px rgba(255,255,150,${lightIntensity * 0.6}), 0 0 30px rgba(255,255,200,${lightIntensity * 0.4})`;
+                    } else {
+                        subTextRef.current.style.opacity = "0";
+                        subTextRef.current.style.textShadow = "none";
+                    }
+                }
+
                 const textRect = textRef.current.getBoundingClientRect();
                 if (lightIntensity > 0.5 && bulbY + bulbRadius > textRect.top && bulbY - bulbRadius < textRect.bottom) {
                     const textGlow = lightIntensity * 0.6;
@@ -501,6 +514,14 @@ export default function HeroSection() {
                     </span>
                 ))}
             </h1>
+            <p
+                ref={subTextRef}
+                className="text-[1.3vw] md:text-[1.1vw] text-gray-600 mt-6 font-medium tracking-wide text-center leading-relaxed w-[70%] md:w-[50%] z-10 pointer-events-none opacity-0 transition-opacity duration-1000"
+            >
+                They say every idea needs a spark.<br />
+                I just happen to be named after the light.
+            </p>
+
         </section>
     );
 }
