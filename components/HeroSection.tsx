@@ -5,8 +5,8 @@ import { useEffect, useRef } from "react";
 export default function HeroSection() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const textRef = useRef<HTMLHeadingElement>(null);
-    const subTextRef = useRef<HTMLParagraphElement>(null);
-    const letterRefs = useRef<HTMLSpanElement[]>([]); // added for individual letters
+    const letterRefs = useRef<HTMLSpanElement[]>([]);
+    const subTextLetterRefs = useRef<HTMLSpanElement[]>([]);
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -22,21 +22,18 @@ export default function HeroSection() {
         const maxStretch = 650;
         const minRopeLength = 150;
 
-        // Switch rope properties (half the bulb rope length)
-        const switchOriginX = canvas.width / 2 + 150; // Position to the right
+        const switchOriginX = canvas.width / 2 + 150;
         const switchOriginY = 0;
-        const switchNaturalLength = 200; // Half of bulb rope
-        const switchMaxStretch = 325; // Half of bulb max stretch
-        const switchMinLength = 75; // Half of bulb min length
-        const switchRadius = 12; // Smaller than bulb
+        const switchNaturalLength = 200;
+        const switchMaxStretch = 325;
+        const switchMinLength = 75;
+        const switchRadius = 12;
 
-        // Realistic physics constants - balanced for natural motion
-        const springConstant = 0.035; // Moderate spring force
-        const damping = 0.96; // Gradual energy loss
-        const gravity = 0.6; // Realistic gravity pull
-        const mass = 1.2; // Bulb has weight
+        const springConstant = 0.035;
+        const damping = 0.96;
+        const gravity = 0.6;
+        const mass = 1.2;
 
-        // Elastic rope physics
         let bulbX = originX;
         let bulbY = originY + naturalRopeLength;
         let velocityX = 0;
@@ -44,9 +41,7 @@ export default function HeroSection() {
         let isDragging = false;
         let dragOffsetX = 0;
         let dragOffsetY = 0;
-        let frame = 0;
 
-        // Switch rope physics
         let switchX = switchOriginX;
         let switchY = switchOriginY + switchNaturalLength;
         let switchVelocityX = 0;
@@ -55,24 +50,52 @@ export default function HeroSection() {
         let switchDragOffsetX = 0;
         let switchDragOffsetY = 0;
 
-        // Light control - now controlled by switch
         let isLightOn = true;
         let lightIntensity = 1.0;
 
-        // Flicker control - ONLY ON FIRST LOAD, 1.2-2.2 sec, chaotic bursts
         let hasFlickered = false;
         let flickerActive = true;
         let flickerTimer = 0;
-        const flickerDurationFrames = 72 + Math.floor(Math.random() * 60); // 1.2-2.2 sec
+        const flickerDurationFrames = 72 + Math.floor(Math.random() * 60);
         let burstCountdown = 0;
 
-        // Mouse/Touch interaction handlers
+        // CRITICAL PERFORMANCE: Cache positions once, update only every 10 frames or on resize
+        let cachedPositions: Array<{ x: number, y: number, element: HTMLSpanElement }> = [];
+        let frameCount = 0;
+        const POSITION_CACHE_FRAMES = 10;
+
+        const updatePositionCache = () => {
+            cachedPositions = [];
+            letterRefs.current.forEach((el) => {
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    cachedPositions.push({
+                        x: rect.left + rect.width / 2,
+                        y: rect.top + rect.height / 2,
+                        element: el
+                    });
+                }
+            });
+            subTextLetterRefs.current.forEach((el) => {
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    cachedPositions.push({
+                        x: rect.left + rect.width / 2,
+                        y: rect.top + rect.height / 2,
+                        element: el
+                    });
+                }
+            });
+        };
+
+        // Wait for DOM to be ready
+        setTimeout(updatePositionCache, 100);
+
         const handlePointerDown = (e: MouseEvent | TouchEvent) => {
             e.preventDefault();
             const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
-            // Check switch first
             const switchDx = clientX - switchX;
             const switchDy = clientY - switchY;
             const switchDistance = Math.sqrt(switchDx * switchDx + switchDy * switchDy);
@@ -86,7 +109,6 @@ export default function HeroSection() {
                 return;
             }
 
-            // Check bulb
             const dx = clientX - bulbX;
             const dy = clientY - bulbY;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -145,16 +167,13 @@ export default function HeroSection() {
         };
 
         const handlePointerUp = () => {
-            // Toggle light when releasing the switch
             if (isSwitchDragging) {
                 isLightOn = !isLightOn;
-                // NO flicker on toggle - only first load
             }
             isDragging = false;
             isSwitchDragging = false;
         };
 
-        // Add event listeners
         canvas.addEventListener('mousedown', handlePointerDown, { passive: false });
         canvas.addEventListener('mousemove', handlePointerMove, { passive: false });
         canvas.addEventListener('mouseup', handlePointerUp);
@@ -166,7 +185,6 @@ export default function HeroSection() {
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Flicker logic - ONLY ON FIRST LOAD
             if (isLightOn && flickerActive && !hasFlickered) {
                 flickerTimer++;
                 if (flickerTimer >= flickerDurationFrames) {
@@ -186,14 +204,12 @@ export default function HeroSection() {
                 lightIntensity = isLightOn ? 1.0 : 0.0;
             }
 
-            // Realistic elastic physics with proper gravity
             if (!isDragging) {
                 const dx = bulbX - originX;
                 const dy = bulbY - originY;
                 const currentLength = Math.sqrt(dx * dx + dy * dy);
                 const stretch = currentLength - naturalRopeLength;
 
-                // Calculate spring force (Hooke's Law: F = -kx)
                 const springForce = -springConstant * stretch;
                 const springForceX = springForce * (dx / currentLength);
                 const springForceY = springForce * (dy / currentLength);
@@ -246,7 +262,6 @@ export default function HeroSection() {
                 }
             }
 
-            // Switch rope physics (same elastic behavior)
             if (!isSwitchDragging) {
                 const dx = switchX - switchOriginX;
                 const dy = switchY - switchOriginY;
@@ -310,7 +325,6 @@ export default function HeroSection() {
             );
             const ropeStretchRatio = currentRopeLength / naturalRopeLength;
 
-            // Draw elastic rope
             ctx.beginPath();
             ctx.strokeStyle = isDragging ? "#FFD700" : "#888";
             ctx.lineWidth = Math.max(1.5, 4 / ropeStretchRatio);
@@ -326,7 +340,6 @@ export default function HeroSection() {
             }
             ctx.stroke();
 
-            // Draw switch rope
             const currentSwitchLength = Math.sqrt(
                 (switchX - switchOriginX) ** 2 + (switchY - switchOriginY) ** 2
             );
@@ -347,7 +360,6 @@ export default function HeroSection() {
             }
             ctx.stroke();
 
-            // Draw light glow only when intensity is high
             if (lightIntensity > 0.5) {
                 const glowRadius = bulbRadius * 12;
                 const gradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, glowRadius);
@@ -363,7 +375,6 @@ export default function HeroSection() {
                 ctx.fill();
             }
 
-            // Bulb
             ctx.beginPath();
             ctx.arc(bulbX, bulbY, bulbRadius, 0, Math.PI * 2);
             const bulbGradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, bulbRadius);
@@ -382,7 +393,6 @@ export default function HeroSection() {
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Filament - always visible, color changes based on state
             ctx.beginPath();
             ctx.lineWidth = 1;
             ctx.strokeStyle = lightIntensity > 0.5 ? `rgba(255, 255, 255, ${lightIntensity})` : `rgba(150, 150, 150, 0.5)`;
@@ -392,11 +402,9 @@ export default function HeroSection() {
             ctx.lineTo(bulbX + bulbRadius * 0.4, bulbY);
             ctx.stroke();
 
-            // Draw rope pull switch (gray metallic style for traditional look)
             ctx.beginPath();
             ctx.arc(switchX, switchY, switchRadius, 0, Math.PI * 2);
 
-            // Gray metallic gradient
             const beadGradient = ctx.createRadialGradient(
                 switchX - switchRadius * 0.3,
                 switchY - switchRadius * 0.3,
@@ -411,81 +419,60 @@ export default function HeroSection() {
             ctx.fillStyle = beadGradient;
             ctx.fill();
 
-            // Bead outline
             ctx.strokeStyle = "#606060";
             ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Center hole
             ctx.beginPath();
             ctx.arc(switchX, switchY, switchRadius * 0.2, 0, Math.PI * 2);
             ctx.fillStyle = "#404040";
             ctx.fill();
 
-            // Highlight to give 3D effect
             ctx.beginPath();
             ctx.arc(switchX - switchRadius * 0.3, switchY - switchRadius * 0.3, switchRadius * 0.25, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
             ctx.fill();
 
-            // Text glow based on light state
-            if (textRef.current) {
-                // Handle subTextRef glow and fade timing
-                if (subTextRef.current) {
-                    if (lightIntensity > 0.5) {
-                        setTimeout(() => { subTextRef.current!.style.opacity = "1"; }, 1500);
-                        subTextRef.current.style.color = `rgba(255, 215, 0, ${lightIntensity})`;
-                        subTextRef.current.style.textShadow = `0 0 15px rgba(255,255,150,${lightIntensity * 0.6}), 0 0 30px rgba(255,255,200,${lightIntensity * 0.4})`;
-                    } else {
-                        subTextRef.current.style.opacity = "0";
-                        subTextRef.current.style.textShadow = "none";
-                    }
-                }
+            // PERFORMANCE CRITICAL: Only update text every N frames
+            frameCount++;
+            if (frameCount % POSITION_CACHE_FRAMES === 0 && cachedPositions.length > 0) {
+                const maxDist = 400;
+                const maxDistSq = maxDist * maxDist; // Use squared distance to avoid sqrt
 
-                const textRect = textRef.current.getBoundingClientRect();
-                if (lightIntensity > 0.5 && bulbY + bulbRadius > textRect.top && bulbY - bulbRadius < textRect.bottom) {
-                    const textGlow = lightIntensity * 0.6;
-                    textRef.current.style.color = `rgba(255, 215, 0, ${lightIntensity})`;
-                    textRef.current.style.textShadow =
-                        `0 0 20px rgba(255,255,150,${textGlow}), 0 0 40px rgba(255,255,150,${textGlow * 0.7})`;
-                } else {
-                    textRef.current.style.color = `rgba(128, 128, 128, 0.5)`;
-                    textRef.current.style.textShadow = "none";
+                for (let i = 0; i < cachedPositions.length; i++) {
+                    const pos = cachedPositions[i];
+                    const dx = bulbX - pos.x;
+                    const dy = bulbY - pos.y;
+                    const distSq = dx * dx + dy * dy;
+
+                    if (distSq > maxDistSq) {
+                        pos.element.style.color = 'rgba(128,128,128,0.5)';
+                        pos.element.style.textShadow = 'none';
+                    } else {
+                        const distance = Math.sqrt(distSq);
+                        const intensity = (1 - distance / maxDist) * lightIntensity;
+
+                        if (intensity > 0.1) {
+                            pos.element.style.color = `rgba(255,215,0,${intensity})`;
+                            if (intensity > 0.05) {
+                                const glow1 = 20 * intensity;
+                                const glow2 = 40 * intensity;
+                                const opacity2 = intensity * 0.7;
+                                pos.element.style.textShadow = `0 0 ${glow1}px rgba(255,255,150,${intensity}),0 0 ${glow2}px rgba(255,255,200,${opacity2})`;
+                            }
+                        } else {
+                            pos.element.style.color = 'rgba(128,128,128,0.5)';
+                            pos.element.style.textShadow = 'none';
+                        }
+                    }
                 }
             }
 
-            // Per-letter glow based on light state
-            letterRefs.current.forEach((span) => {
-                if (!span) return;
-                const rect = span.getBoundingClientRect();
-                const cx = rect.left + rect.width / 2;
-                const cy = rect.top + rect.height / 2;
-                const dx = bulbX - cx;
-                const dy = bulbY - cy;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const maxDist = 400;
-
-                const intensity = Math.max(0, 1 - distance / maxDist) * lightIntensity;
-
-                span.style.color =
-                    intensity > 0.1
-                        ? `rgba(255,215,0,${intensity})`
-                        : `rgba(100,100,100,0.4)`;
-
-                span.style.textShadow =
-                    intensity > 0.05
-                        ? `0 0 ${20 * intensity}px rgba(255,255,150,${intensity}),
-                           0 0 ${40 * intensity}px rgba(255,255,200,${intensity * 0.7})`
-                        : "none";
-            });
-
-            frame++;
             requestAnimationFrame(draw);
         }
 
         draw();
 
-        // Cleanup
         return () => {
             canvas.removeEventListener('mousedown', handlePointerDown);
             canvas.removeEventListener('mousemove', handlePointerMove);
@@ -496,6 +483,8 @@ export default function HeroSection() {
             canvas.removeEventListener('touchend', handlePointerUp);
         };
     }, []);
+
+    const subTextContent = "They say every idea needs a spark. I just happen to be named after the light.";
 
     return (
         <section className="relative w-full h-screen bg-black flex flex-col items-center justify-center overflow-hidden">
@@ -508,20 +497,31 @@ export default function HeroSection() {
                     <span
                         key={i}
                         ref={(el) => { if (el) letterRefs.current[i] = el; }}
-                        className="inline-block transition-all duration-75"
+                        className="inline-block"
+                        style={{ willChange: 'color, text-shadow' }}
                     >
                         {ch}
                     </span>
                 ))}
             </h1>
             <p
-                ref={subTextRef}
-                className="text-[1.3vw] md:text-[1.1vw] text-gray-600 mt-6 font-medium tracking-wide text-center leading-relaxed w-[70%] md:w-[50%] z-10 pointer-events-none opacity-0 transition-opacity duration-1000"
+                className="text-[1.3vw] md:text-[1.1vw] mt-6 font-medium tracking-wide text-center leading-relaxed w-[70%] md:w-[50%] z-10 pointer-events-none"
             >
-                They say every idea needs a spark.<br />
-                I just happen to be named after the light.
+                {subTextContent.split("").map((ch, i) => (
+                    <span
+                        key={i}
+                        ref={(el) => { if (el) subTextLetterRefs.current[i] = el; }}
+                        className="inline-block"
+                        style={{
+                            color: "rgba(128,128,128,0.5)",
+                            whiteSpace: ch === " " ? "pre" : "normal",
+                            willChange: 'color, text-shadow'
+                        }}
+                    >
+                        {ch === " " ? "\u00A0" : ch}
+                    </span>
+                ))}
             </p>
-
         </section>
     );
 }
