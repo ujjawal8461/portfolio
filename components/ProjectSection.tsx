@@ -10,7 +10,7 @@ interface Project {
     techStack: string[];
     liveUrl?: string;
     githubUrl?: string;
-    unlockAt: number;
+    position: number;
 }
 
 export default function ProjectsSection() {
@@ -18,6 +18,7 @@ export default function ProjectsSection() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [scrollProgress, setScrollProgress] = useState(0);
     const [hoveredProject, setHoveredProject] = useState<number | null>(null);
+    const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 900 });
 
     const projects: Project[] = [
         {
@@ -28,7 +29,7 @@ export default function ProjectsSection() {
             techStack: ["React", "Node.js", "MongoDB", "Stripe", "Redis"],
             liveUrl: "https://example.com",
             githubUrl: "https://github.com",
-            unlockAt: 0.2
+            position: 0.25
         },
         {
             id: 2,
@@ -38,7 +39,7 @@ export default function ProjectsSection() {
             techStack: ["Next.js", "Socket.io", "PostgreSQL", "AWS S3"],
             liveUrl: "https://example.com",
             githubUrl: "https://github.com",
-            unlockAt: 0.45
+            position: 0.55
         },
         {
             id: 3,
@@ -47,7 +48,7 @@ export default function ProjectsSection() {
             details: "Created an intelligent content generation tool that uses custom-trained models to produce high-quality written content. Features API integration for external services and Docker containerization.",
             techStack: ["Python", "TensorFlow", "React", "FastAPI", "Docker"],
             githubUrl: "https://github.com",
-            unlockAt: 0.7
+            position: 0.85
         }
     ];
 
@@ -84,71 +85,167 @@ export default function ProjectsSection() {
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d")!;
-        const dpr = window.devicePixelRatio || 1;
 
         const resizeCanvas = () => {
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            canvas.style.width = `${window.innerWidth}px`;
-            canvas.style.height = `${window.innerHeight}px`;
-            ctx.scale(dpr, dpr);
+            const width = Math.min(window.innerWidth * 0.9, 1000);
+            const height = Math.min(window.innerHeight * 0.85, 900);
+
+            setCanvasSize({ width, height });
+
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
         };
 
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
 
         let animationFrame: number;
-        let particles: Array<{ x: number; y: number; vx: number; vy: number; life: number }> = [];
 
         const animate = () => {
-            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
 
-            // Add new particles occasionally
-            if (Math.random() < 0.05 && scrollProgress > 0.05) {
-                particles.push({
-                    x: Math.random() * window.innerWidth,
-                    y: window.innerHeight,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: -1 - Math.random() * 2,
-                    life: 1
-                });
+            const centerX = canvasSize.width / 2;
+            const startY = 80;
+            const endY = canvasSize.height - 50;
+            const totalHeight = endY - startY;
+
+            // Draw main vertical trunk
+            ctx.strokeStyle = "#888";
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(centerX, startY);
+            ctx.lineTo(centerX, endY);
+            ctx.stroke();
+
+            // Draw powered portion of trunk
+            if (scrollProgress > 0.05) {
+                const poweredY = startY + totalHeight * Math.min(scrollProgress * 1.2, 1);
+                ctx.strokeStyle = "#FFD700";
+                ctx.lineWidth = 5;
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
+                ctx.beginPath();
+                ctx.moveTo(centerX, startY);
+                ctx.lineTo(centerX, Math.min(poweredY, endY));
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Energy particle on trunk
+                if (poweredY < endY) {
+                    ctx.beginPath();
+                    ctx.arc(centerX, poweredY, 8, 0, Math.PI * 2);
+                    ctx.fillStyle = "#FFF";
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = "rgba(255, 255, 0, 1)";
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
             }
 
-            // Update and draw particles
-            particles = particles.filter(p => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.01;
+            // Draw project branches and nodes
+            projects.forEach((project, index) => {
+                const nodeY = startY + totalHeight * project.position;
+                const branchLength = 180;
+                const isLeft = index % 2 === 0;
+                const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
 
-                if (p.life > 0) {
-                    const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 3);
-                    gradient.addColorStop(0, `rgba(255, 215, 0, ${p.life * 0.8})`);
-                    gradient.addColorStop(1, `rgba(255, 215, 0, 0)`);
+                // Draw horizontal branch
+                ctx.strokeStyle = "#888";
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(centerX, nodeY);
+                ctx.lineTo(branchEndX, nodeY);
+                ctx.stroke();
+
+                // Check if powered
+                const isPowered = scrollProgress * 1.2 > project.position;
+
+                if (isPowered) {
+                    ctx.strokeStyle = "#FFD700";
+                    ctx.lineWidth = 4;
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, nodeY);
+                    ctx.lineTo(branchEndX, nodeY);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+
+                    // Energy particle on branch
+                    const t = (Date.now() / 1000) % 1;
+                    const particleX = centerX + (branchEndX - centerX) * t;
 
                     ctx.beginPath();
-                    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    ctx.arc(particleX, nodeY, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = "#FFF";
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = "rgba(255, 255, 0, 1)";
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+
+                // Draw node
+                const nodeRadius = 15;
+
+                // Node glow if powered
+                if (isPowered) {
+                    const pulseTime = Date.now() / 1000;
+                    const pulse = Math.sin(pulseTime * 2 + project.id) * 0.15 + 0.85;
+
+                    const glowRadius = nodeRadius * 8;
+                    const gradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, glowRadius);
+                    gradient.addColorStop(0, `rgba(255, 240, 150, ${pulse * 0.5})`);
+                    gradient.addColorStop(0.2, `rgba(255, 220, 120, ${pulse * 0.4})`);
+                    gradient.addColorStop(0.5, `rgba(255, 200, 100, ${pulse * 0.25})`);
+                    gradient.addColorStop(0.8, `rgba(255, 180, 80, ${pulse * 0.1})`);
+                    gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
+
+                    ctx.beginPath();
+                    ctx.arc(branchEndX, nodeY, glowRadius, 0, Math.PI * 2);
                     ctx.fillStyle = gradient;
                     ctx.fill();
-                    return true;
                 }
-                return false;
-            });
 
-            // Draw energy lines connecting between sections
-            if (scrollProgress > 0.1) {
-                ctx.strokeStyle = `rgba(255, 215, 0, ${0.1 + scrollProgress * 0.2})`;
-                ctx.lineWidth = 1;
-                ctx.setLineDash([5, 5]);
-                ctx.lineDashOffset = -Date.now() / 50;
+                // Draw node circle
+                ctx.beginPath();
+                ctx.arc(branchEndX, nodeY, nodeRadius, 0, Math.PI * 2);
 
-                for (let i = 0; i < 3; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(0, window.innerHeight * (0.3 + i * 0.2));
-                    ctx.lineTo(window.innerWidth, window.innerHeight * (0.3 + i * 0.2));
+                if (isPowered) {
+                    const pulseTime = Date.now() / 1000;
+                    const pulse = Math.sin(pulseTime * 2 + project.id) * 0.2 + 0.8;
+
+                    const bulbGradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, nodeRadius);
+                    bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${pulse * 1.0})`);
+                    bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${pulse * 0.8})`);
+                    bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${pulse * 0.6})`);
+                    ctx.fillStyle = bulbGradient;
+                    ctx.fill();
+
+                    ctx.shadowBlur = 40 * pulse;
+                    ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
+                    ctx.strokeStyle = "#FFFFFF";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                } else {
+                    const inactiveGradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, nodeRadius);
+                    inactiveGradient.addColorStop(0, `rgba(200, 200, 200, 0.3)`);
+                    inactiveGradient.addColorStop(0.7, `rgba(150, 150, 150, 0.4)`);
+                    inactiveGradient.addColorStop(1, `rgba(100, 100, 100, 0.5)`);
+                    ctx.fillStyle = inactiveGradient;
+                    ctx.fill();
+                    ctx.strokeStyle = "#666";
+                    ctx.lineWidth = 2;
                     ctx.stroke();
                 }
-                ctx.setLineDash([]);
-            }
+
+                // Draw small box around node
+                ctx.strokeStyle = isPowered ? "rgba(255, 215, 0, 0.4)" : "rgba(128, 128, 128, 0.4)";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(branchEndX - 10, nodeY - 10, 20, 20);
+            });
 
             animationFrame = requestAnimationFrame(animate);
         };
@@ -159,17 +256,10 @@ export default function ProjectsSection() {
             cancelAnimationFrame(animationFrame);
             window.removeEventListener("resize", resizeCanvas);
         };
-    }, [scrollProgress]);
+    }, [scrollProgress, canvasSize.width, canvasSize.height]);
 
-    const isProjectUnlocked = (project: Project) => {
-        return scrollProgress >= project.unlockAt;
-    };
-
-    const getProjectProgress = (project: Project) => {
-        const unlockRange = 0.15;
-        const startUnlock = project.unlockAt - unlockRange;
-        const progress = (scrollProgress - startUnlock) / unlockRange;
-        return Math.max(0, Math.min(1, progress));
+    const isProjectPowered = (project: Project) => {
+        return scrollProgress * 1.2 > project.position;
     };
 
     return (
@@ -178,17 +268,10 @@ export default function ProjectsSection() {
             className="relative w-full bg-black"
             style={{ minHeight: "250vh" }}
         >
-            <canvas
-                ref={canvasRef}
-                className="fixed top-0 left-0 pointer-events-none"
-                style={{ zIndex: 1 }}
-            />
-
             <div className="sticky top-0 min-h-screen flex flex-col items-center justify-center py-16 px-4 md:px-8"
                 style={{ zIndex: 2 }}
             >
-                {/* Title */}
-                <div className="relative mb-20">
+                <div className="relative mb-16">
                     <h2
                         className="text-center text-5xl md:text-7xl font-bold tracking-[0.3em] uppercase"
                         style={{
@@ -196,161 +279,73 @@ export default function ProjectsSection() {
                             textShadow: scrollProgress > 0.05
                                 ? "0 0 60px rgba(255,215,0,0.6), 0 0 100px rgba(255,215,0,0.3)"
                                 : "none",
-                            transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-                            fontFamily: "system-ui, -apple-system, sans-serif"
+                            transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
                         }}
                     >
                         PROJECTS
                     </h2>
-
-                    {scrollProgress > 0.05 && (
-                        <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-32 h-1"
-                            style={{
-                                background: "linear-gradient(90deg, transparent, rgba(255,215,0,0.8), transparent)",
-                                boxShadow: "0 0 20px rgba(255,215,0,0.5)",
-                                animation: "shimmer 3s ease-in-out infinite"
-                            }}
-                        />
-                    )}
                 </div>
 
-                {/* Projects Container */}
-                <div className="max-w-6xl w-full space-y-12 md:space-y-20">
-                    {projects.map((project, index) => {
-                        const isUnlocked = isProjectUnlocked(project);
-                        const progress = getProjectProgress(project);
-                        const intensity = progress;
+                <div className="relative flex justify-center items-center flex-1 w-full">
+                    <div className="relative">
+                        <canvas ref={canvasRef} />
 
-                        return (
-                            <div
-                                key={project.id}
-                                className="relative"
-                                onMouseEnter={() => setHoveredProject(project.id)}
-                                onMouseLeave={() => setHoveredProject(null)}
-                            >
-                                {/* Project Number & Progress Bar */}
-                                <div className="flex items-center gap-6 mb-6">
-                                    <div
-                                        className="text-6xl md:text-8xl font-black tracking-tighter"
-                                        style={{
-                                            color: isUnlocked ? "#FFD700" : "#333",
-                                            textShadow: isUnlocked
-                                                ? `0 0 40px rgba(255,215,0,${intensity * 0.8})`
-                                                : "none",
-                                            transition: "all 0.6s ease",
-                                            fontFamily: "system-ui, -apple-system, sans-serif"
-                                        }}
-                                    >
-                                        {String(index + 1).padStart(2, '0')}
-                                    </div>
+                        {/* Project cards */}
+                        {projects.map((project, index) => {
+                            const centerX = canvasSize.width / 2;
+                            const startY = 80;
+                            const endY = canvasSize.height - 50;
+                            const totalHeight = endY - startY;
+                            const nodeY = startY + totalHeight * project.position;
+                            const branchLength = 180;
+                            const isLeft = index % 2 === 0;
+                            const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
+                            const isPowered = isProjectPowered(project);
+                            const intensity = isPowered ? 1 : 0;
 
-                                    {/* Energy Progress Bar */}
-                                    <div className="flex-1 relative h-3 bg-gray-900 rounded-full overflow-hidden">
-                                        {/* Background grid pattern */}
-                                        <div className="absolute inset-0 opacity-20"
-                                            style={{
-                                                backgroundImage: "repeating-linear-gradient(90deg, #444 0px, #444 2px, transparent 2px, transparent 10px)"
-                                            }}
-                                        />
-
-                                        {/* Filled progress */}
-                                        <div
-                                            className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
-                                            style={{
-                                                width: `${progress * 100}%`,
-                                                background: "linear-gradient(90deg, rgba(255,180,0,0.8), rgba(255,215,0,1))",
-                                                boxShadow: isUnlocked
-                                                    ? `0 0 20px rgba(255,215,0,0.8), inset 0 0 10px rgba(255,255,255,0.5)`
-                                                    : "none"
-                                            }}
-                                        />
-
-                                        {/* Animated glow at the end */}
-                                        {progress > 0 && progress < 1 && (
-                                            <div
-                                                className="absolute top-0 h-full w-8"
-                                                style={{
-                                                    left: `${progress * 100}%`,
-                                                    background: "radial-gradient(circle, rgba(255,255,255,1), rgba(255,215,0,0.5), transparent)",
-                                                    filter: "blur(3px)",
-                                                    transform: "translateX(-50%)",
-                                                    animation: "pulse 1s ease-in-out infinite"
-                                                }}
-                                            />
-                                        )}
-                                    </div>
-
-                                    {/* Lock/Unlock icon */}
-                                    <div className="text-3xl">
-                                        {isUnlocked ? (
-                                            <div style={{
-                                                color: "#FFD700",
-                                                filter: `drop-shadow(0 0 10px rgba(255,215,0,${intensity * 0.8}))`
-                                            }}>
-                                                ⚡
-                                            </div>
-                                        ) : (
-                                            <div style={{ color: "#555" }}>🔒</div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Main Project Card */}
+                            return (
                                 <div
-                                    className="relative overflow-hidden rounded-2xl transition-all duration-700"
+                                    key={project.id}
+                                    className="absolute pointer-events-auto"
+                                    onMouseEnter={() => setHoveredProject(project.id)}
+                                    onMouseLeave={() => setHoveredProject(null)}
                                     style={{
-                                        background: isUnlocked
-                                            ? "linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,180,0,0.04))"
-                                            : "rgba(15,15,15,0.8)",
-                                        border: `2px solid ${isUnlocked ? `rgba(255,215,0,${0.3 + intensity * 0.4})` : "rgba(40,40,40,0.5)"}`,
-                                        boxShadow: isUnlocked
-                                            ? `0 0 60px rgba(255,215,0,${intensity * 0.3}), inset 0 0 60px rgba(255,215,0,${intensity * 0.05})`
-                                            : "none",
-                                        transform: hoveredProject === project.id && isUnlocked
-                                            ? "translateY(-8px) scale(1.02)"
-                                            : "translateY(0) scale(1)",
-                                        filter: !isUnlocked ? "grayscale(0.8) brightness(0.5)" : "none"
+                                        left: isLeft ? `${branchEndX - 420}px` : `${branchEndX + 40}px`,
+                                        top: `${nodeY - 150}px`,
+                                        width: "380px"
                                     }}
                                 >
-                                    {/* Animated corner accents */}
-                                    {isUnlocked && (
-                                        <>
-                                            <div className="absolute top-0 left-0 w-32 h-32"
+                                    <div
+                                        className="relative overflow-hidden rounded-xl p-6"
+                                        style={{
+                                            background: isPowered
+                                                ? "linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,180,0,0.04))"
+                                                : "rgba(15,15,15,0.8)",
+                                            border: `2px solid ${isPowered ? `rgba(255,215,0,${0.3 + intensity * 0.4})` : "rgba(40,40,40,0.5)"}`,
+                                            boxShadow: isPowered
+                                                ? `0 0 40px rgba(255,215,0,${intensity * 0.3})`
+                                                : "none",
+                                            transition: "all 0.6s ease",
+                                            transform: hoveredProject === project.id && isPowered
+                                                ? "translateY(-8px)"
+                                                : "translateY(0)",
+                                            filter: !isPowered ? "grayscale(0.8) brightness(0.5)" : "none"
+                                        }}
+                                    >
+                                        {isPowered && (
+                                            <div className="absolute top-0 left-0 w-24 h-24"
                                                 style={{
-                                                    background: `radial-gradient(circle at top left, rgba(255,215,0,${intensity * 0.3}), transparent 70%)`,
-                                                    animation: "pulse 3s ease-in-out infinite"
+                                                    background: `radial-gradient(circle at top left, rgba(255,215,0,${intensity * 0.3}), transparent 70%)`
                                                 }}
                                             />
-                                            <div className="absolute bottom-0 right-0 w-32 h-32"
-                                                style={{
-                                                    background: `radial-gradient(circle at bottom right, rgba(255,215,0,${intensity * 0.3}), transparent 70%)`,
-                                                    animation: "pulse 3s ease-in-out infinite 1.5s"
-                                                }}
-                                            />
-                                        </>
-                                    )}
+                                        )}
 
-                                    {/* Circuit pattern overlay */}
-                                    {isUnlocked && (
-                                        <div className="absolute inset-0 opacity-5"
-                                            style={{
-                                                backgroundImage: `
-                                                    linear-gradient(rgba(255,215,0,1) 1px, transparent 1px),
-                                                    linear-gradient(90deg, rgba(255,215,0,1) 1px, transparent 1px)
-                                                `,
-                                                backgroundSize: "50px 50px"
-                                            }}
-                                        />
-                                    )}
-
-                                    <div className="relative z-10 p-8 md:p-12">
-                                        {/* Project Title */}
                                         <h3
-                                            className="text-3xl md:text-5xl font-bold mb-4 tracking-wide"
+                                            className="text-xl md:text-2xl font-bold mb-2 tracking-wide"
                                             style={{
-                                                color: isUnlocked ? "#FFD700" : "#666",
-                                                textShadow: isUnlocked
-                                                    ? `0 0 30px rgba(255,215,0,${intensity * 0.6})`
+                                                color: isPowered ? "#FFD700" : "#666",
+                                                textShadow: isPowered
+                                                    ? `0 0 25px rgba(255,215,0,${intensity * 0.6})`
                                                     : "none",
                                                 transition: "all 0.5s ease"
                                             }}
@@ -358,21 +353,19 @@ export default function ProjectsSection() {
                                             {project.name}
                                         </h3>
 
-                                        {/* Short Description */}
                                         <p
-                                            className="text-lg md:text-xl mb-6 font-medium"
+                                            className="text-sm mb-4 font-medium"
                                             style={{
-                                                color: isUnlocked ? "rgba(255,215,0,0.7)" : "#555",
+                                                color: isPowered ? "rgba(255,215,0,0.7)" : "#555",
                                                 transition: "all 0.5s ease"
                                             }}
                                         >
                                             {project.description}
                                         </p>
 
-                                        {/* Detailed Description (shown when unlocked) */}
-                                        {isUnlocked && (
+                                        {isPowered && (
                                             <p
-                                                className="text-base md:text-lg mb-8 leading-relaxed"
+                                                className="text-xs mb-4 leading-relaxed"
                                                 style={{
                                                     color: "rgba(200,200,200,0.9)",
                                                     opacity: intensity,
@@ -383,24 +376,20 @@ export default function ProjectsSection() {
                                             </p>
                                         )}
 
-                                        {/* Tech Stack */}
-                                        <div className="flex flex-wrap gap-3 mb-8">
+                                        <div className="flex flex-wrap gap-2 mb-4">
                                             {project.techStack.map((tech, techIndex) => (
                                                 <span
                                                     key={techIndex}
-                                                    className="px-5 py-2.5 rounded-lg text-sm font-bold tracking-wider uppercase"
+                                                    className="px-3 py-1.5 rounded-md text-xs font-bold tracking-wider uppercase"
                                                     style={{
-                                                        background: isUnlocked
+                                                        background: isPowered
                                                             ? "rgba(255,215,0,0.15)"
                                                             : "rgba(50,50,50,0.3)",
-                                                        color: isUnlocked ? "#FFD700" : "#666",
-                                                        border: `1.5px solid ${isUnlocked ? "rgba(255,215,0,0.4)" : "rgba(80,80,80,0.3)"}`,
-                                                        boxShadow: isUnlocked
-                                                            ? `0 0 15px rgba(255,215,0,${intensity * 0.2})`
-                                                            : "none",
+                                                        color: isPowered ? "#FFD700" : "#666",
+                                                        border: `1px solid ${isPowered ? "rgba(255,215,0,0.4)" : "rgba(80,80,80,0.3)"}`,
                                                         transition: "all 0.5s ease",
-                                                        transitionDelay: `${techIndex * 0.1}s`,
-                                                        opacity: isUnlocked ? 1 : 0.5
+                                                        transitionDelay: `${techIndex * 0.08}s`,
+                                                        opacity: isPowered ? 1 : 0.5
                                                     }}
                                                 >
                                                     {tech}
@@ -408,9 +397,8 @@ export default function ProjectsSection() {
                                             ))}
                                         </div>
 
-                                        {/* Action Buttons */}
-                                        {isUnlocked && (
-                                            <div className="flex flex-wrap gap-4"
+                                        {isPowered && (
+                                            <div className="flex flex-wrap gap-2"
                                                 style={{
                                                     opacity: intensity,
                                                     transition: "opacity 0.6s ease 0.3s"
@@ -421,22 +409,17 @@ export default function ProjectsSection() {
                                                         href={project.liveUrl}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="group px-8 py-4 rounded-xl font-bold text-base tracking-wide uppercase transition-all duration-300"
+                                                        className="px-5 py-2.5 rounded-lg font-bold text-xs tracking-wide uppercase transition-all duration-300"
                                                         style={{
                                                             background: "linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,180,0,0.2))",
                                                             border: "2px solid rgba(255,215,0,0.6)",
-                                                            color: "#FFD700",
-                                                            boxShadow: "0 0 30px rgba(255,215,0,0.4)"
+                                                            color: "#FFD700"
                                                         }}
                                                         onMouseEnter={(e) => {
-                                                            e.currentTarget.style.boxShadow = "0 0 50px rgba(255,215,0,0.7)";
-                                                            e.currentTarget.style.transform = "translateY(-3px)";
-                                                            e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,215,0,0.4), rgba(255,180,0,0.3))";
+                                                            e.currentTarget.style.boxShadow = "0 0 30px rgba(255,215,0,0.6)";
                                                         }}
                                                         onMouseLeave={(e) => {
-                                                            e.currentTarget.style.boxShadow = "0 0 30px rgba(255,215,0,0.4)";
-                                                            e.currentTarget.style.transform = "translateY(0)";
-                                                            e.currentTarget.style.background = "linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,180,0,0.2))";
+                                                            e.currentTarget.style.boxShadow = "none";
                                                         }}
                                                     >
                                                         View Live →
@@ -447,22 +430,17 @@ export default function ProjectsSection() {
                                                         href={project.githubUrl}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="px-8 py-4 rounded-xl font-bold text-base tracking-wide uppercase transition-all duration-300"
+                                                        className="px-5 py-2.5 rounded-lg font-bold text-xs tracking-wide uppercase transition-all duration-300"
                                                         style={{
                                                             background: "rgba(255,215,0,0.05)",
                                                             border: "2px solid rgba(255,215,0,0.3)",
-                                                            color: "rgba(255,215,0,0.8)",
-                                                            boxShadow: "0 0 20px rgba(255,215,0,0.2)"
+                                                            color: "rgba(255,215,0,0.8)"
                                                         }}
                                                         onMouseEnter={(e) => {
                                                             e.currentTarget.style.background = "rgba(255,215,0,0.1)";
-                                                            e.currentTarget.style.boxShadow = "0 0 35px rgba(255,215,0,0.4)";
-                                                            e.currentTarget.style.borderColor = "rgba(255,215,0,0.5)";
                                                         }}
                                                         onMouseLeave={(e) => {
                                                             e.currentTarget.style.background = "rgba(255,215,0,0.05)";
-                                                            e.currentTarget.style.boxShadow = "0 0 20px rgba(255,215,0,0.2)";
-                                                            e.currentTarget.style.borderColor = "rgba(255,215,0,0.3)";
                                                         }}
                                                     >
                                                         GitHub
@@ -471,51 +449,22 @@ export default function ProjectsSection() {
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Hover scan line effect */}
-                                    {hoveredProject === project.id && isUnlocked && (
-                                        <div
-                                            className="absolute inset-0 pointer-events-none"
-                                            style={{
-                                                background: "linear-gradient(180deg, transparent, rgba(255,215,0,0.1), transparent)",
-                                                animation: "scanLine 2s linear infinite"
-                                            }}
-                                        />
-                                    )}
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
 
-                {/* Footer hint */}
                 <div
-                    className="text-center text-xs tracking-[0.4em] uppercase mt-16"
+                    className="text-center text-xs tracking-[0.4em] uppercase mt-8"
                     style={{
                         color: scrollProgress < 0.95 ? "#555" : "#333",
                         opacity: scrollProgress < 0.95 ? 0.8 : 0.3,
                         transition: "all 0.6s ease"
                     }}
                 >
-                    Scroll to power up • Unlock all projects
+                    Scroll to power up projects
                 </div>
-
-                <style jsx>{`
-                    @keyframes shimmer {
-                        0% { transform: translateX(-100%); }
-                        100% { transform: translateX(200%); }
-                    }
-                    
-                    @keyframes pulse {
-                        0%, 100% { opacity: 0.6; }
-                        50% { opacity: 1; }
-                    }
-                    
-                    @keyframes scanLine {
-                        0% { transform: translateY(-100%); }
-                        100% { transform: translateY(200%); }
-                    }
-                `}</style>
             </div>
         </section>
     );
