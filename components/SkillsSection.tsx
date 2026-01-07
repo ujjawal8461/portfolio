@@ -2,42 +2,55 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export default function GridGlowSkills() {
-    const sectionRef = useRef<HTMLDivElement>(null);
-    const [scrollProgress, setScrollProgress] = useState(0);
+interface SkillNode {
+    id: number;
+    name: string;
+    branch: "frontend" | "backend" | "database" | "tools";
+    position: number;
+}
 
-    const skillCategories = [
-        {
-            id: 1,
-            category: "Programming Languages",
-            skills: ["C", "C++", "JavaScript", "TypeScript"]
-        },
-        {
-            id: 2,
-            category: "Frontend Development",
-            skills: ["HTML", "CSS", "Sass", "Tailwind CSS", "Bootstrap", "React.js", "Next.js", "Redux", "Redux Toolkit", "Material UI"]
-        },
-        {
-            id: 3,
-            category: "Backend Development",
-            skills: ["Node.js", "Express.js", "REST API", "GraphQL", "JWT Authentication", "Swagger"]
-        },
-        {
-            id: 4,
-            category: "Databases",
-            skills: ["MySQL", "MongoDB", "PostgreSQL", "Mongoose", "Knex.js"]
-        },
-        {
-            id: 5,
-            category: "Full Stack Framework",
-            skills: ["MERN Stack"]
-        },
-        {
-            id: 6,
-            category: "Tools & Platforms",
-            skills: ["VS Code", "Postman", "Git", "GitHub", "Bitbucket", "Jira", "Android Studio", "Figma", "Canva", "Vercel"]
-        }
+export default function SkillsSection() {
+    const sectionRef = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [scrollProgress, setScrollProgress] = useState(0);
+    const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 900 });
+
+    const skills: SkillNode[] = [
+        // Frontend
+        { id: 1, name: "HTML", branch: "frontend", position: 0.1 },
+        { id: 2, name: "CSS", branch: "frontend", position: 0.15 },
+        { id: 3, name: "JavaScript", branch: "frontend", position: 0.2 },
+        { id: 4, name: "TypeScript", branch: "frontend", position: 0.25 },
+        { id: 5, name: "React.js", branch: "frontend", position: 0.3 },
+        { id: 6, name: "Next.js", branch: "frontend", position: 0.35 },
+        { id: 7, name: "Tailwind", branch: "frontend", position: 0.4 },
+        { id: 8, name: "Redux", branch: "frontend", position: 0.45 },
+
+        // Backend
+        { id: 9, name: "Node.js", branch: "backend", position: 0.55 },
+        { id: 10, name: "Express.js", branch: "backend", position: 0.6 },
+        { id: 11, name: "REST API", branch: "backend", position: 0.65 },
+        { id: 12, name: "GraphQL", branch: "backend", position: 0.7 },
+        { id: 13, name: "JWT", branch: "backend", position: 0.75 },
+
+        // Database
+        { id: 14, name: "MySQL", branch: "database", position: 0.82 },
+        { id: 15, name: "MongoDB", branch: "database", position: 0.87 },
+        { id: 16, name: "PostgreSQL", branch: "database", position: 0.92 },
+
+        // Tools
+        { id: 17, name: "Git", branch: "tools", position: 0.97 },
+        { id: 18, name: "GitHub", branch: "tools", position: 1.02 },
+        { id: 19, name: "Docker", branch: "tools", position: 1.07 },
+        { id: 20, name: "Vercel", branch: "tools", position: 1.12 }
     ];
+
+    const branchStarts = {
+        frontend: 0.05,
+        backend: 0.5,
+        database: 0.8,
+        tools: 0.95
+    };
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -67,166 +80,290 @@ export default function GridGlowSkills() {
         };
     }, []);
 
-    const isCardActive = (index: number) => {
-        const cardProgress = (index + 1) / skillCategories.length;
-        return scrollProgress >= cardProgress * 0.8;
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d")!;
+
+        const resizeCanvas = () => {
+            const width = Math.min(window.innerWidth * 0.9, 1000);
+            const height = Math.min(window.innerHeight * 0.85, 900);
+
+            setCanvasSize({ width, height });
+
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+        };
+
+        resizeCanvas();
+        window.addEventListener("resize", resizeCanvas);
+
+        let animationFrame: number;
+
+        const animate = () => {
+            ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
+
+            const centerX = canvasSize.width / 2;
+            const startY = 80;
+            const endY = canvasSize.height - 50;
+            const totalHeight = endY - startY;
+
+            // Draw main vertical trunk
+            ctx.strokeStyle = "#888";
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(centerX, startY);
+            ctx.lineTo(centerX, endY);
+            ctx.stroke();
+
+            // Draw powered portion of trunk
+            if (scrollProgress > 0.05) {
+                const poweredY = startY + totalHeight * Math.min(scrollProgress * 1.3, 1.15);
+                ctx.strokeStyle = "#FFD700";
+                ctx.lineWidth = 5;
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
+                ctx.beginPath();
+                ctx.moveTo(centerX, startY);
+                ctx.lineTo(centerX, Math.min(poweredY, endY));
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Energy particle on trunk
+                if (poweredY < endY) {
+                    ctx.beginPath();
+                    ctx.arc(centerX, poweredY, 8, 0, Math.PI * 2);
+                    ctx.fillStyle = "#FFF";
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = "rgba(255, 255, 0, 1)";
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            // Draw horizontal branches
+            Object.entries(branchStarts).forEach(([branch, startPos]) => {
+                const branchY = startY + totalHeight * startPos;
+                const branchLength = 150;
+                const isLeft = branch === "frontend" || branch === "database";
+                const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
+
+                // Draw branch connector
+                ctx.strokeStyle = "#888";
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(centerX, branchY);
+                ctx.lineTo(branchEndX, branchY);
+                ctx.stroke();
+
+                // Check if powered
+                if (scrollProgress * 1.3 > startPos) {
+                    ctx.strokeStyle = "#FFD700";
+                    ctx.lineWidth = 4;
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, branchY);
+                    ctx.lineTo(branchEndX, branchY);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            });
+
+            // Draw skill nodes
+            skills.forEach((skill) => {
+                const nodeY = startY + totalHeight * skill.position;
+                const branchStart = branchStarts[skill.branch];
+                const branchY = startY + totalHeight * branchStart;
+                const branchLength = 150;
+                const isLeft = skill.branch === "frontend" || skill.branch === "database";
+                const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
+
+                const isPowered = scrollProgress * 1.3 > skill.position;
+                const nodeRadius = 12;
+
+                // Node glow if powered
+                if (isPowered) {
+                    const pulseTime = Date.now() / 1000;
+                    const pulse = Math.sin(pulseTime * 2 + skill.id) * 0.15 + 0.85;
+
+                    const glowRadius = nodeRadius * 6;
+                    const gradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, glowRadius);
+                    gradient.addColorStop(0, `rgba(255, 240, 150, ${pulse * 0.4})`);
+                    gradient.addColorStop(0.5, `rgba(255, 200, 100, ${pulse * 0.2})`);
+                    gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
+
+                    ctx.beginPath();
+                    ctx.arc(branchEndX, nodeY, glowRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                }
+
+                // Draw node circle
+                ctx.beginPath();
+                ctx.arc(branchEndX, nodeY, nodeRadius, 0, Math.PI * 2);
+
+                if (isPowered) {
+                    const pulseTime = Date.now() / 1000;
+                    const pulse = Math.sin(pulseTime * 2 + skill.id) * 0.2 + 0.8;
+
+                    const bulbGradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, nodeRadius);
+                    bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${pulse})`);
+                    bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${pulse * 0.8})`);
+                    bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${pulse * 0.6})`);
+                    ctx.fillStyle = bulbGradient;
+                    ctx.fill();
+
+                    ctx.shadowBlur = 30 * pulse;
+                    ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
+                    ctx.strokeStyle = "#FFFFFF";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                } else {
+                    const inactiveGradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, nodeRadius);
+                    inactiveGradient.addColorStop(0, `rgba(200, 200, 200, 0.3)`);
+                    inactiveGradient.addColorStop(0.7, `rgba(150, 150, 150, 0.4)`);
+                    inactiveGradient.addColorStop(1, `rgba(100, 100, 100, 0.5)`);
+                    ctx.fillStyle = inactiveGradient;
+                    ctx.fill();
+                    ctx.strokeStyle = "#666";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // Draw small box around node
+                ctx.strokeStyle = isPowered ? "rgba(255, 215, 0, 0.4)" : "rgba(128, 128, 128, 0.4)";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(branchEndX - 8, nodeY - 8, 16, 16);
+            });
+
+            animationFrame = requestAnimationFrame(animate);
+        };
+
+        animate();
+
+        return () => {
+            cancelAnimationFrame(animationFrame);
+            window.removeEventListener("resize", resizeCanvas);
+        };
+    }, [scrollProgress, canvasSize.width, canvasSize.height]);
+
+    const isSkillPowered = (skill: SkillNode) => {
+        return scrollProgress * 1.3 > skill.position;
     };
 
     return (
         <section
             ref={sectionRef}
             className="relative w-full bg-black"
-            style={{ height: "250vh" }}
+            style={{ height: "300vh" }}
         >
             <div className="sticky top-0 h-screen overflow-hidden flex flex-col items-center justify-center py-8 px-4">
                 <h2
-                    className="text-center text-5xl md:text-6xl font-bold mb-16 tracking-[0.25em] uppercase"
+                    className="text-center text-5xl md:text-6xl font-bold mb-12 tracking-[0.25em] uppercase"
                     style={{
                         color: scrollProgress > 0.05 ? "#FFD700" : "#888",
                         textShadow: scrollProgress > 0.05 ? "0 0 50px rgba(255,215,0,0.5)" : "none",
-                        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                        fontFamily: "system-ui, -apple-system, sans-serif"
+                        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
                     }}
                 >
                     SKILLS
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
-                    {skillCategories.map((category, index) => {
-                        const isActive = isCardActive(index);
-                        const intensity = isActive ? 1 : 0;
+                <div className="relative flex justify-center items-center flex-1 w-full">
+                    <div className="relative">
+                        <canvas ref={canvasRef} />
 
-                        return (
-                            <div
-                                key={category.id}
-                                className="relative"
-                                style={{
-                                    transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
-                                    transitionDelay: `${index * 0.1}s`
-                                }}
-                            >
-                                {/* Glow effect */}
-                                {isActive && (
-                                    <div
-                                        className="absolute inset-0 rounded-lg"
-                                        style={{
-                                            background: `radial-gradient(circle at center, rgba(255, 215, 0, ${intensity * 0.15}), transparent 70%)`,
-                                            filter: `blur(20px)`,
-                                            transform: `scale(1.1)`,
-                                            animation: "pulse 3s ease-in-out infinite"
-                                        }}
-                                    />
-                                )}
+                        {/* Branch labels */}
+                        {Object.entries(branchStarts).map(([branch, startPos]) => {
+                            const centerX = canvasSize.width / 2;
+                            const startY = 80;
+                            const endY = canvasSize.height - 50;
+                            const totalHeight = endY - startY;
+                            const branchY = startY + totalHeight * startPos;
+                            const branchLength = 150;
+                            const isLeft = branch === "frontend" || branch === "database";
+                            const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
+                            const isPowered = scrollProgress * 1.3 > startPos;
 
-                                {/* Card */}
+                            return (
                                 <div
-                                    className="relative p-6 rounded-lg overflow-hidden"
+                                    key={branch}
+                                    className="absolute pointer-events-none"
                                     style={{
-                                        backgroundColor: isActive ? "rgba(255, 215, 0, 0.05)" : "rgba(20, 20, 20, 0.5)",
-                                        border: `2px solid ${isActive ? `rgba(255, 215, 0, ${intensity * 0.5})` : "rgba(50, 50, 50, 0.3)"}`,
-                                        boxShadow: isActive ?
-                                            `0 0 30px rgba(255, 215, 0, ${intensity * 0.3}), inset 0 0 30px rgba(255, 215, 0, ${intensity * 0.1})` :
-                                            "none",
-                                        transition: "all 0.6s ease",
-                                        minHeight: "200px"
+                                        left: isLeft ? `${branchEndX - 180}px` : `${branchEndX + 25}px`,
+                                        top: `${branchY - 30}px`,
+                                        textAlign: isLeft ? "right" : "left",
+                                        width: "150px"
                                     }}
                                 >
-                                    {/* Animated border effect */}
-                                    {isActive && (
-                                        <div
-                                            className="absolute inset-0 rounded-lg"
-                                            style={{
-                                                background: `linear-gradient(90deg, 
-                                                    transparent, 
-                                                    rgba(255, 215, 0, ${intensity * 0.3}), 
-                                                    transparent)`,
-                                                animation: "shimmer 3s ease-in-out infinite"
-                                            }}
-                                        />
-                                    )}
-
-                                    <div className="relative z-10">
-                                        <h3
-                                            className="text-xl font-bold mb-4 tracking-wider"
-                                            style={{
-                                                color: isActive ? "#FFD700" : "#666",
-                                                textShadow: isActive ? `0 0 20px rgba(255, 215, 0, ${intensity * 0.6})` : "none",
-                                                transition: "all 0.4s ease",
-                                                fontFamily: "system-ui, -apple-system, sans-serif"
-                                            }}
-                                        >
-                                            {category.category}
-                                        </h3>
-
-                                        <div className="flex flex-wrap gap-2">
-                                            {category.skills.map((skill, skillIndex) => (
-                                                <span
-                                                    key={skillIndex}
-                                                    className="text-sm px-3 py-1.5 rounded-md"
-                                                    style={{
-                                                        backgroundColor: isActive ? "rgba(255, 215, 0, 0.2)" : "rgba(100, 100, 100, 0.2)",
-                                                        color: isActive ? "rgba(255, 245, 200, 0.95)" : "#888",
-                                                        border: `1px solid ${isActive ? "rgba(255, 215, 0, 0.4)" : "rgba(100, 100, 100, 0.3)"}`,
-                                                        transition: "all 0.4s ease",
-                                                        transitionDelay: `${skillIndex * 0.05}s`,
-                                                        boxShadow: isActive ? `0 0 10px rgba(255, 215, 0, ${intensity * 0.2})` : "none",
-                                                        fontFamily: "system-ui, -apple-system, sans-serif"
-                                                    }}
-                                                >
-                                                    {skill}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Corner accent */}
-                                    {isActive && (
-                                        <>
-                                            <div
-                                                className="absolute top-0 left-0 w-8 h-8"
-                                                style={{
-                                                    background: `linear-gradient(135deg, rgba(255, 215, 0, ${intensity * 0.5}), transparent)`,
-                                                    borderTopLeftRadius: "8px"
-                                                }}
-                                            />
-                                            <div
-                                                className="absolute bottom-0 right-0 w-8 h-8"
-                                                style={{
-                                                    background: `linear-gradient(-45deg, rgba(255, 215, 0, ${intensity * 0.5}), transparent)`,
-                                                    borderBottomRightRadius: "8px"
-                                                }}
-                                            />
-                                        </>
-                                    )}
+                                    <span
+                                        className="text-xl font-bold tracking-wider uppercase block mb-1"
+                                        style={{
+                                            color: isPowered ? "#FFD700" : "#888",
+                                            textShadow: isPowered ? "0 0 20px rgba(255,215,0,0.6)" : "none",
+                                            transition: "all 0.3s ease"
+                                        }}
+                                    >
+                                        {branch}
+                                    </span>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+
+                        {/* Skill labels */}
+                        {skills.map((skill) => {
+                            const centerX = canvasSize.width / 2;
+                            const startY = 80;
+                            const endY = canvasSize.height - 50;
+                            const totalHeight = endY - startY;
+                            const nodeY = startY + totalHeight * skill.position;
+                            const branchLength = 150;
+                            const isLeft = skill.branch === "frontend" || skill.branch === "database";
+                            const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
+                            const isPowered = isSkillPowered(skill);
+                            const intensity = isPowered ? 1 : 0;
+
+                            return (
+                                <div
+                                    key={skill.id}
+                                    className="absolute pointer-events-none"
+                                    style={{
+                                        left: isLeft ? `${branchEndX - 180}px` : `${branchEndX + 25}px`,
+                                        top: `${nodeY - 10}px`,
+                                        textAlign: isLeft ? "right" : "left",
+                                        width: "150px"
+                                    }}
+                                >
+                                    <span
+                                        className="text-base font-semibold"
+                                        style={{
+                                            color: isPowered ? `rgba(255, 240, 180, ${0.95 * intensity})` : "#888",
+                                            textShadow: isPowered ? `0 0 ${15 * intensity}px rgba(255,255,150,${intensity * 0.6})` : "none",
+                                            transition: "all 0.3s ease"
+                                        }}
+                                    >
+                                        {skill.name}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 <div
-                    className="text-center text-xs tracking-[0.35em] uppercase mt-12"
+                    className="text-center text-xs tracking-[0.35em] uppercase mt-6"
                     style={{
                         color: scrollProgress < 0.95 ? "#555" : "#222",
-                        opacity: scrollProgress < 0.95 ? 0.7 : 0,
-                        transition: "all 0.5s ease",
-                        fontFamily: "system-ui, -apple-system, sans-serif"
+                        transition: "all 0.5s ease"
                     }}
                 >
-                    Scroll to charge up • Watch skills illuminate
+                    Scroll to energize skill tree
                 </div>
-
-                <style jsx>{`
-                    @keyframes pulse {
-                        0%, 100% { opacity: 0.8; }
-                        50% { opacity: 1; }
-                    }
-                    
-                    @keyframes shimmer {
-                        0% { transform: translateX(-100%); }
-                        100% { transform: translateX(100%); }
-                    }
-                `}</style>
             </div>
         </section>
     );

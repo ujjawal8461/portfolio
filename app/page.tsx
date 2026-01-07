@@ -10,8 +10,8 @@ export default function Home() {
       <HeroSection />
       <TimeLineSection />
       <SkillSection />
-      <ProjectsSection />
-      <ProjectsSection2 />
+      {/* <ProjectsSection3 /> */}
+      {/* <ProjectsSection2 /> */}
     </main>
   );
 }
