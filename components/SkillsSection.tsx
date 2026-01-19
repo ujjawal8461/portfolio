@@ -362,7 +362,7 @@ export default function SkillsSection() {
                         transition: "all 0.5s ease"
                     }}
                 >
-                    Scroll to energize skill tree
+                    {/* Scroll to energize skill tree */}
                 </div>
             </div>
         </section>

@@ -709,7 +709,7 @@ export default function CircuitTimeline() {
                         fontFamily: "system-ui, -apple-system, sans-serif"
                     }}
                 >
-                    Scroll to energize • Click switches to control circuit
+                    {/* Scroll to energize • Click switches to control circuit */}
                 </div>
             </div>
         </section>

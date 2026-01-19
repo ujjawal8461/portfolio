@@ -463,7 +463,7 @@ export default function ProjectsSection() {
                         transition: "all 0.6s ease"
                     }}
                 >
-                    Scroll to power up projects
+                    {/* Scroll to power up projects */}
                 </div>
             </div>
         </section>
