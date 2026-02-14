@@ -484,7 +484,7 @@ export default function HeroSection() {
         };
     }, []);
 
-    const subTextContent = "They say every idea needs a spark. I just happen to be named after the light.";
+    const subTextContent = "Hi, I’ve been building full-stack web products, working across frontend and backend to design complete systems. I focus on transforming complex requirements into structured, scalable architecture building applications that feel effortless for users but are carefully engineered behind the scenes.";
 
     return (
         <section className="relative w-full h-screen bg-black flex flex-col items-center justify-center overflow-hidden">
