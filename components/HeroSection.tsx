@@ -576,7 +576,7 @@ export default function HeroSection() {
                                     if (/^\s+$/.test(token)) {
                                         // Render spaces with preserved whitespace so spacing remains.
                                         return (
-                                            <span key={`sp-${ti}`} style={{whiteSpace: 'pre'}}>
+                                            <span key={`sp-${ti}`} style={{ whiteSpace: 'pre' }}>
                                                 {token}
                                             </span>
                                         );
@@ -585,7 +585,7 @@ export default function HeroSection() {
                                     // Render each word as an inline-block so the whole word
                                     // wraps to the next line instead of breaking mid-word.
                                     return (
-                                        <span key={`w-${ti}`} style={{display: 'inline-block'}}>
+                                        <span key={`w-${ti}`} style={{ display: 'inline-block' }}>
                                             {token.split("").map((ch, j) => {
                                                 const idx = letterIndex++;
                                                 return (
