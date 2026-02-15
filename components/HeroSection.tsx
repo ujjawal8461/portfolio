@@ -1,18 +1,28 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function HeroSection() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const textRef = useRef<HTMLHeadingElement>(null);
     const letterRefs = useRef<HTMLSpanElement[]>([]);
     const subTextLetterRefs = useRef<HTMLSpanElement[]>([]);
+    const isLightOnRef = useRef(false);
+    const [isLightOn, setIsLightOn] = useState(false);
+    // Keep the switch hint in component state only (no browser storage).
+    // It will show on initial load and reset on full page refresh.
+    const [showSwitchHint, setShowSwitchHint] = useState<boolean>(true);
+    const [ropePositions, setRopePositions] = useState({ bulbX: '50%', switchX: '50%' });
 
     useEffect(() => {
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d")!;
+        // Ensure the canvas CSS size matches the drawing buffer so
+        // DOM-based coordinates (percentages) align with canvas pixels.
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        canvas.style.width = `${window.innerWidth}px`;
+        canvas.style.height = `${window.innerHeight}px`;
 
         const originX = canvas.width / 2;
         const originY = 0;
@@ -29,8 +39,16 @@ export default function HeroSection() {
         const switchMinLength = 75;
         const switchRadius = 12;
 
+        // Calculate rope positions as percentages for text positioning
+        const bulbRopePercent = (originX / canvas.width) * 100;
+        const switchRopePercent = (switchOriginX / canvas.width) * 100;
+        setRopePositions({
+            bulbX: `${bulbRopePercent}%`,
+            switchX: `${switchRopePercent}%`
+        });
+
         const springConstant = 0.035;
-        const damping = 0.96;
+        const damping = 0.94; // Reduced from 0.96 for smoother motion
         const gravity = 0.6;
         const mass = 1.2;
 
@@ -50,8 +68,9 @@ export default function HeroSection() {
         let switchDragOffsetX = 0;
         let switchDragOffsetY = 0;
 
-        let isLightOn = true;
-        let lightIntensity = 1.0;
+        // Start the bulb OFF by default (client state mirrors this via isLightOnRef)
+        let isLightOn = isLightOnRef.current;
+        let lightIntensity = isLightOn ? 1.0 : 0.0;
 
         let hasFlickered = false;
         let flickerActive = true;
@@ -87,6 +106,10 @@ export default function HeroSection() {
                 }
             });
         };
+        // Keep a lightweight ref of the last rope positions (pixels) to avoid
+        // calling setState every frame. We'll only update when position shifts
+        // beyond a small threshold.
+        const ropePosRef = { bulbX: 0, switchX: 0 } as { bulbX: number; switchX: number };
 
         // Wait for DOM to be ready
         setTimeout(updatePositionCache, 100);
@@ -169,6 +192,11 @@ export default function HeroSection() {
         const handlePointerUp = () => {
             if (isSwitchDragging) {
                 isLightOn = !isLightOn;
+                isLightOnRef.current = isLightOn;
+                setIsLightOn(isLightOn);
+                if (showSwitchHint) {
+                    setShowSwitchHint(false);
+                }
             }
             isDragging = false;
             isSwitchDragging = false;
@@ -325,16 +353,40 @@ export default function HeroSection() {
             );
             const ropeStretchRatio = currentRopeLength / naturalRopeLength;
 
+            // Update visible rope-aligned instruction positions occasionally
+            // Convert canvas X to percentage of viewport width and only set
+            // state when the value changes more than 0.5px to avoid re-renders.
+            if (typeof setRopePositions === 'function') {
+                // Keep instruction anchored to the static rope origin (switchOriginX)
+                const switchPercent = (switchOriginX / canvas.width) * 100;
+                const prevSwitch = ropePosRef.switchX;
+                const switchDiff = Math.abs(switchPercent - prevSwitch);
+
+                if (frameCount % 12 === 0 || isSwitchDragging) {
+                    if (switchDiff > 0.05) {
+                        ropePosRef.switchX = switchPercent;
+                        setRopePositions((p) => ({ ...p, switchX: `${switchPercent}%` }));
+                    }
+                }
+            }
+
+            // Calculate rope endpoint at bulb top instead of center
+            const bulbRopeDx = bulbX - originX;
+            const bulbRopeDy = bulbY - originY;
+            const bulbRopeDist = Math.sqrt(bulbRopeDx * bulbRopeDx + bulbRopeDy * bulbRopeDy);
+            const bulbRopeEndX = bulbX - (bulbRopeDx / bulbRopeDist) * bulbRadius;
+            const bulbRopeEndY = bulbY - (bulbRopeDy / bulbRopeDist) * bulbRadius;
+
             ctx.beginPath();
             ctx.strokeStyle = isDragging ? "#FFD700" : "#888";
             ctx.lineWidth = Math.max(1.5, 4 / ropeStretchRatio);
 
             for (let i = 0; i <= segments; i++) {
                 const t = i / segments;
-                const x = originX + (bulbX - originX) * t;
+                const x = originX + (bulbRopeEndX - originX) * t;
                 const curveAmount = 40 / Math.pow(ropeStretchRatio, 1.2);
                 const curve = Math.sin(Math.PI * t) * curveAmount;
-                const y = originY + (bulbY - originY) * t + curve;
+                const y = originY + (bulbRopeEndY - originY) * t + curve;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
@@ -345,16 +397,23 @@ export default function HeroSection() {
             );
             const switchStretchRatio = currentSwitchLength / switchNaturalLength;
 
+            // Calculate rope endpoint at switch top instead of center
+            const switchRopeDx = switchX - switchOriginX;
+            const switchRopeDy = switchY - switchOriginY;
+            const switchRopeDist = Math.sqrt(switchRopeDx * switchRopeDx + switchRopeDy * switchRopeDy);
+            const switchRopeEndX = switchX - (switchRopeDx / switchRopeDist) * switchRadius;
+            const switchRopeEndY = switchY - (switchRopeDy / switchRopeDist) * switchRadius;
+
             ctx.beginPath();
             ctx.strokeStyle = isSwitchDragging ? "#FFD700" : "#888";
             ctx.lineWidth = Math.max(1.5, 4 / switchStretchRatio);
 
             for (let i = 0; i <= segments; i++) {
                 const t = i / segments;
-                const x = switchOriginX + (switchX - switchOriginX) * t;
+                const x = switchOriginX + (switchRopeEndX - switchOriginX) * t;
                 const curveAmount = 40 / Math.pow(switchStretchRatio, 1.2);
                 const curve = Math.sin(Math.PI * t) * curveAmount;
-                const y = switchOriginY + (switchY - switchOriginY) * t + curve;
+                const y = switchOriginY + (switchRopeEndY - switchOriginY) * t + curve;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
@@ -404,34 +463,11 @@ export default function HeroSection() {
 
             ctx.beginPath();
             ctx.arc(switchX, switchY, switchRadius, 0, Math.PI * 2);
-
-            const beadGradient = ctx.createRadialGradient(
-                switchX - switchRadius * 0.3,
-                switchY - switchRadius * 0.3,
-                0,
-                switchX,
-                switchY,
-                switchRadius
-            );
-            beadGradient.addColorStop(0, "#C0C0C0");
-            beadGradient.addColorStop(0.5, "#A0A0A0");
-            beadGradient.addColorStop(1, "#808080");
-            ctx.fillStyle = beadGradient;
+            ctx.fillStyle = "#E8E8E8";
             ctx.fill();
-
-            ctx.strokeStyle = "#606060";
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#999";
+            ctx.lineWidth = 1.5;
             ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(switchX, switchY, switchRadius * 0.2, 0, Math.PI * 2);
-            ctx.fillStyle = "#404040";
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(switchX - switchRadius * 0.3, switchY - switchRadius * 0.3, switchRadius * 0.25, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-            ctx.fill();
 
             // PERFORMANCE CRITICAL: Only update text every N frames
             frameCount++;
@@ -484,44 +520,101 @@ export default function HeroSection() {
         };
     }, []);
 
-    const subTextContent = "Hi, I’ve been building full-stack web products, working across frontend and backend to design complete systems. I focus on transforming complex requirements into structured, scalable architecture building applications that feel effortless for users but are carefully engineered behind the scenes.";
+    const subTextContent = "Hi, I’ve been building full-stack web products, working across frontend and backend to design complete systems. I focus on transforming complex requirements into structured, scalable architecture building applications that feel effortless for users but are carefully engineered behind the scenes to know more about me scroll down.";
 
     return (
         <section className="relative w-full h-screen bg-black flex flex-col items-center justify-center overflow-hidden">
             <canvas ref={canvasRef} className="absolute top-0 left-0" />
-            <h1
-                ref={textRef}
-                className="text-[8vw] text-gray-800 font-bold tracking-widest z-10 relative pointer-events-none"
-            >
-                {"UJJAWAL".split("").map((ch, i) => (
-                    <span
-                        key={i}
-                        ref={(el) => { if (el) letterRefs.current[i] = el; }}
-                        className="inline-block"
-                        style={{ willChange: 'color, text-shadow' }}
-                    >
-                        {ch}
-                    </span>
-                ))}
-            </h1>
-            <p
-                className="text-[1.3vw] md:text-[1.1vw] mt-6 font-medium tracking-wide text-center leading-relaxed w-[70%] md:w-[50%] z-10 pointer-events-none"
-            >
-                {subTextContent.split("").map((ch, i) => (
-                    <span
-                        key={i}
-                        ref={(el) => { if (el) subTextLetterRefs.current[i] = el; }}
-                        className="inline-block"
-                        style={{
-                            color: "rgba(128,128,128,0.5)",
-                            whiteSpace: ch === " " ? "pre" : "normal",
-                            willChange: 'color, text-shadow'
-                        }}
-                    >
-                        {ch === " " ? "\u00A0" : ch}
-                    </span>
-                ))}
-            </p>
+
+            <div className="flex flex-col items-center justify-center">
+                <h1
+                    ref={textRef}
+                    className="text-[8vw] text-gray-800 font-bold tracking-widest z-10 pointer-events-none"
+                >
+                    {"UJJAWAL".split("").map((ch, i) => (
+                        <span
+                            key={i}
+                            ref={(el) => { if (el) letterRefs.current[i] = el; }}
+                            className="inline-block"
+                            style={{ willChange: 'color, text-shadow' }}
+                        >
+                            {ch}
+                        </span>
+                    ))}
+                </h1>
+            </div>
+
+            {/* Instruction hint on switch rope (shows once) */}
+            {showSwitchHint && !isLightOn && (
+                <div
+                    className="fixed top-1/4 z-20 animate-fade-in pointer-events-none"
+                    style={{
+                        left: ropePositions.switchX,
+                        transform: 'translateX(-50%)',
+                        transformOrigin: 'center center',
+                        whiteSpace: 'nowrap'
+                    }}
+                >
+                    <p className="text-xs md:text-sm text-gray-500 font-medium tracking-wide blink">
+                        Drag the button to turn on the bulb
+                    </p>
+                </div>
+            )}
+
+            {/* bulb instruction removed - only switch hint is shown */}
+
+            {/* Description - overlaid without affecting layout */}
+            <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 w-[70%] md:w-[50%] text-center z-10 pointer-events-none">
+                <p className="text-[1.3vw] md:text-[1.1vw] font-medium tracking-wide leading-relaxed min-h-[100px] transition-opacity duration-500">
+                    {isLightOn ? (
+                        <span>
+                            {(() => {
+                                // Split into words and spaces so we wrap at word boundaries.
+                                const tokens = subTextContent.split(/(\s+)/);
+                                let letterIndex = 0;
+                                return tokens.map((token, ti) => {
+                                    if (/^\s+$/.test(token)) {
+                                        // Render spaces with preserved whitespace so spacing remains.
+                                        return (
+                                            <span key={`sp-${ti}`} style={{whiteSpace: 'pre'}}>
+                                                {token}
+                                            </span>
+                                        );
+                                    }
+
+                                    // Render each word as an inline-block so the whole word
+                                    // wraps to the next line instead of breaking mid-word.
+                                    return (
+                                        <span key={`w-${ti}`} style={{display: 'inline-block'}}>
+                                            {token.split("").map((ch, j) => {
+                                                const idx = letterIndex++;
+                                                return (
+                                                    <span
+                                                        key={`l-${ti}-${j}`}
+                                                        ref={(el) => { if (el) subTextLetterRefs.current[idx] = el; }}
+                                                        className="inline-block"
+                                                        style={{
+                                                            color: "rgba(128,128,128,0.5)",
+                                                            whiteSpace: 'normal',
+                                                            willChange: 'color, text-shadow'
+                                                        }}
+                                                    >
+                                                        {ch}
+                                                    </span>
+                                                );
+                                            })}
+                                        </span>
+                                    );
+                                });
+                            })()}
+                        </span>
+                    ) : (
+                        <span className="text-gray-500 font-medium">
+                            Turn on the bulb to know about me.
+                        </span>
+                    )}
+                </p>
+            </div>
         </section>
     );
 }

@@ -33,6 +33,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
+        // Suppress hydration warnings caused by differences injected by browser
+        // extensions (e.g. Grammarly) or other client-only DOM modifications.
+        // Long-term: keep server-rendered output deterministic and move any
+        // non-deterministic logic into client components / useEffect.
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} antialiased`}
       >
         {children}

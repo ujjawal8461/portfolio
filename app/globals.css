@@ -24,3 +24,27 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-in-out forwards;
+  }
+  @keyframes blinkAnim {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    50% { opacity: 0.35; transform: translateY(-1px) scale(0.998); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  /* Slower, gentler blink for improved readability */
+  .blink {
+    animation: blinkAnim 3.6s cubic-bezier(.22,.9,.35,1) infinite;
+  }
+}
