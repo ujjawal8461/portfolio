@@ -30,22 +30,30 @@ export default function HeroSection() {
 
         // Get responsive parameters
         const getResponsiveParams = () => {
-            const isMobileView = window.innerWidth < 768;
-            const isTabletView = window.innerWidth >= 768 && window.innerWidth < 1024;
+            // Use window.innerWidth as the source, but it will be overridden by resizeCanvas if needed
+            const screenWidth = window.innerWidth;
+            const isMobileView = screenWidth < 768;
+            const isTabletView = screenWidth >= 768 && screenWidth < 1024;
             const scaleFactor = isMobileView ? 0.7 : isTabletView ? 0.85 : 1;
+
+            // Position based on percentages (from desktop 1920px layout)
+            // Bulb: 50% from left
+            // Switch: 57.81% from left
+            const bulbPercentage = 50;
+            const switchPercentage = 57.81;
 
             return {
                 isMobileView,
                 isTabletView,
                 scaleFactor,
-                originX: window.innerWidth / 2,
+                originX: (screenWidth * bulbPercentage) / 100,
                 originY: 0,
                 bulbRadius: 25 * scaleFactor,
                 segments: 30,
                 naturalRopeLength: isMobileView ? 250 : isTabletView ? 350 : 400,
                 maxStretch: isMobileView ? 400 : isTabletView ? 550 : 650,
                 minRopeLength: isMobileView ? 100 : isTabletView ? 125 : 150,
-                switchOffsetX: isMobileView ? 100 : isTabletView ? 125 : 150,
+                switchOffsetX: (screenWidth * (switchPercentage - bulbPercentage)) / 100,
                 switchNaturalLength: isMobileView ? 150 : isTabletView ? 175 : 200,
                 switchMaxStretch: isMobileView ? 250 : isTabletView ? 290 : 325,
                 switchMinLength: isMobileView ? 60 : isTabletView ? 70 : 75,
@@ -57,7 +65,10 @@ export default function HeroSection() {
         let switchOriginX = params.originX + params.switchOffsetX;
         let switchOriginY = params.originY;
 
-        // Physics state
+        // Log initial positions
+        console.log(`Screen: ${window.innerWidth}px | Bulb: ${params.originX.toFixed(0)}px (50%) | Switch: ${switchOriginX.toFixed(0)}px (57.81%)`);
+
+        // Physics state  
         let bulbX = params.originX;
         let bulbY = params.originY + params.naturalRopeLength;
         let velocityX = 0;
@@ -128,6 +139,19 @@ export default function HeroSection() {
             params = getResponsiveParams();
             switchOriginX = params.originX + params.switchOffsetX;
             switchOriginY = params.originY;
+
+            // Log positions on resize for debugging
+            const bulbPositionPercent = (params.originX / window.innerWidth) * 100;
+            const switchPositionPercent = (switchOriginX / window.innerWidth) * 100;
+            
+            let deviceType = '';
+            if (window.innerWidth < 768) {
+                deviceType = 'MOBILE';
+            } else if (window.innerWidth >= 768 && window.innerWidth < 1024) {
+                deviceType = 'TABLET';
+            } else {
+                deviceType = 'DESKTOP';
+            }
 
             // Update rope positions
             const bulbRopePercent = (params.originX / window.innerWidth) * 100;
@@ -258,7 +282,20 @@ export default function HeroSection() {
         canvas.addEventListener('touchend', handlePointerUp);
         canvas.addEventListener('touchcancel', handlePointerUp);
 
+        let lastKnownWidth = window.innerWidth;
+
         function draw() {
+            // Check if width has changed and recalculate positions
+            const currentWidth = window.innerWidth;
+            if (currentWidth !== lastKnownWidth) {
+                lastKnownWidth = currentWidth;
+                // Resize canvas when width changes
+                resizeCanvas();
+                params = getResponsiveParams();
+                switchOriginX = params.originX + params.switchOffsetX;
+                switchOriginY = params.originY;
+            }
+
             ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
             // Flicker effect
