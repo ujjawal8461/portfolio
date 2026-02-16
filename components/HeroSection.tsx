@@ -9,51 +9,57 @@ export default function HeroSection() {
     const subTextLetterRefs = useRef<HTMLSpanElement[]>([]);
     const isLightOnRef = useRef(false);
     const [isLightOn, setIsLightOn] = useState(false);
-    // Keep the switch hint in component state only (no browser storage).
-    // It will show on initial load and reset on full page refresh.
     const [showSwitchHint, setShowSwitchHint] = useState<boolean>(true);
     const [ropePositions, setRopePositions] = useState({ bulbX: '50%', switchX: '50%' });
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     useEffect(() => {
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d")!;
-        // Ensure the canvas CSS size matches the drawing buffer so
-        // DOM-based coordinates (percentages) align with canvas pixels.
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        canvas.style.width = `${window.innerWidth}px`;
-        canvas.style.height = `${window.innerHeight}px`;
 
-        const originX = canvas.width / 2;
-        const originY = 0;
-        const bulbRadius = 25;
-        const segments = 30;
-        const naturalRopeLength = 400;
-        const maxStretch = 650;
-        const minRopeLength = 150;
+        let animationFrameId: number;
 
-        const switchOriginX = canvas.width / 2 + 150;
-        const switchOriginY = 0;
-        const switchNaturalLength = 200;
-        const switchMaxStretch = 325;
-        const switchMinLength = 75;
-        const switchRadius = 12;
+        // Get responsive parameters
+        const getResponsiveParams = () => {
+            const isMobileView = window.innerWidth < 768;
+            const isTabletView = window.innerWidth >= 768 && window.innerWidth < 1024;
+            const scaleFactor = isMobileView ? 0.7 : isTabletView ? 0.85 : 1;
 
-        // Calculate rope positions as percentages for text positioning
-        const bulbRopePercent = (originX / canvas.width) * 100;
-        const switchRopePercent = (switchOriginX / canvas.width) * 100;
-        setRopePositions({
-            bulbX: `${bulbRopePercent}%`,
-            switchX: `${switchRopePercent}%`
-        });
+            return {
+                isMobileView,
+                isTabletView,
+                scaleFactor,
+                originX: window.innerWidth / 2,
+                originY: 0,
+                bulbRadius: 25 * scaleFactor,
+                segments: 30,
+                naturalRopeLength: isMobileView ? 250 : isTabletView ? 350 : 400,
+                maxStretch: isMobileView ? 400 : isTabletView ? 550 : 650,
+                minRopeLength: isMobileView ? 100 : isTabletView ? 125 : 150,
+                switchOffsetX: isMobileView ? 100 : isTabletView ? 125 : 150,
+                switchNaturalLength: isMobileView ? 150 : isTabletView ? 175 : 200,
+                switchMaxStretch: isMobileView ? 250 : isTabletView ? 290 : 325,
+                switchMinLength: isMobileView ? 60 : isTabletView ? 70 : 75,
+                switchRadius: 12 * scaleFactor
+            };
+        };
 
-        const springConstant = 0.035;
-        const damping = 0.94; // Reduced from 0.96 for smoother motion
-        const gravity = 0.6;
-        const mass = 1.2;
+        let params = getResponsiveParams();
+        let switchOriginX = params.originX + params.switchOffsetX;
+        let switchOriginY = params.originY;
 
-        let bulbX = originX;
-        let bulbY = originY + naturalRopeLength;
+        // Physics state
+        let bulbX = params.originX;
+        let bulbY = params.originY + params.naturalRopeLength;
         let velocityX = 0;
         let velocityY = 0;
         let isDragging = false;
@@ -61,27 +67,30 @@ export default function HeroSection() {
         let dragOffsetY = 0;
 
         let switchX = switchOriginX;
-        let switchY = switchOriginY + switchNaturalLength;
+        let switchY = switchOriginY + params.switchNaturalLength;
         let switchVelocityX = 0;
         let switchVelocityY = 0;
         let isSwitchDragging = false;
         let switchDragOffsetX = 0;
         let switchDragOffsetY = 0;
 
-        // Start the bulb OFF by default (client state mirrors this via isLightOnRef)
         let isLightOn = isLightOnRef.current;
         let lightIntensity = isLightOn ? 1.0 : 0.0;
-
         let hasFlickered = false;
         let flickerActive = true;
         let flickerTimer = 0;
         const flickerDurationFrames = 72 + Math.floor(Math.random() * 60);
         let burstCountdown = 0;
 
-        // CRITICAL PERFORMANCE: Cache positions once, update only every 10 frames or on resize
+        const springConstant = 0.035;
+        const damping = 0.94;
+        const gravity = 0.6;
+        const mass = 1.2;
+
         let cachedPositions: Array<{ x: number, y: number, element: HTMLSpanElement }> = [];
         let frameCount = 0;
         const POSITION_CACHE_FRAMES = 10;
+        const ropePosRef = { bulbX: 0, switchX: 0 };
 
         const updatePositionCache = () => {
             cachedPositions = [];
@@ -106,24 +115,63 @@ export default function HeroSection() {
                 }
             });
         };
-        // Keep a lightweight ref of the last rope positions (pixels) to avoid
-        // calling setState every frame. We'll only update when position shifts
-        // beyond a small threshold.
-        const ropePosRef = { bulbX: 0, switchX: 0 } as { bulbX: number; switchX: number };
 
-        // Wait for DOM to be ready
+        const resizeCanvas = () => {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = `${window.innerWidth}px`;
+            canvas.style.height = `${window.innerHeight}px`;
+            ctx.scale(dpr, dpr);
+
+            // Update responsive parameters
+            params = getResponsiveParams();
+            switchOriginX = params.originX + params.switchOffsetX;
+            switchOriginY = params.originY;
+
+            // Update rope positions
+            const bulbRopePercent = (params.originX / window.innerWidth) * 100;
+            const switchRopePercent = (switchOriginX / window.innerWidth) * 100;
+            setRopePositions({
+                bulbX: `${bulbRopePercent}%`,
+                switchX: `${switchRopePercent}%`
+            });
+
+            // Reset positions
+            bulbX = params.originX;
+            bulbY = params.originY + params.naturalRopeLength;
+            velocityX = 0;
+            velocityY = 0;
+
+            switchX = switchOriginX;
+            switchY = switchOriginY + params.switchNaturalLength;
+            switchVelocityX = 0;
+            switchVelocityY = 0;
+
+            setTimeout(updatePositionCache, 100);
+        };
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
         setTimeout(updatePositionCache, 100);
+
+        const getPointerPosition = (e: MouseEvent | TouchEvent) => {
+            if ('touches' in e && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+        };
 
         const handlePointerDown = (e: MouseEvent | TouchEvent) => {
             e.preventDefault();
-            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            const { x: clientX, y: clientY } = getPointerPosition(e);
+            const touchTargetRadius = params.isMobileView ? 50 : 30;
 
             const switchDx = clientX - switchX;
             const switchDy = clientY - switchY;
             const switchDistance = Math.sqrt(switchDx * switchDx + switchDy * switchDy);
 
-            if (switchDistance <= switchRadius + 30) {
+            if (switchDistance <= params.switchRadius + touchTargetRadius) {
                 isSwitchDragging = true;
                 switchDragOffsetX = clientX - switchX;
                 switchDragOffsetY = clientY - switchY;
@@ -136,7 +184,7 @@ export default function HeroSection() {
             const dy = clientY - bulbY;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (distance <= bulbRadius + 30) {
+            if (distance <= params.bulbRadius + touchTargetRadius) {
                 isDragging = true;
                 dragOffsetX = clientX - bulbX;
                 dragOffsetY = clientY - bulbY;
@@ -149,8 +197,7 @@ export default function HeroSection() {
             if (!isDragging && !isSwitchDragging) return;
             e.preventDefault();
 
-            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            const { x: clientX, y: clientY } = getPointerPosition(e);
 
             if (isSwitchDragging) {
                 switchX = clientX - switchDragOffsetX;
@@ -160,12 +207,12 @@ export default function HeroSection() {
                 const dy = switchY - switchOriginY;
                 const currentLength = Math.sqrt(dx * dx + dy * dy);
 
-                if (currentLength > switchMaxStretch) {
-                    const ratio = switchMaxStretch / currentLength;
+                if (currentLength > params.switchMaxStretch) {
+                    const ratio = params.switchMaxStretch / currentLength;
                     switchX = switchOriginX + dx * ratio;
                     switchY = switchOriginY + dy * ratio;
-                } else if (currentLength < switchMinLength) {
-                    const ratio = switchMinLength / currentLength;
+                } else if (currentLength < params.switchMinLength) {
+                    const ratio = params.switchMinLength / currentLength;
                     switchX = switchOriginX + dx * ratio;
                     switchY = switchOriginY + dy * ratio;
                 }
@@ -173,18 +220,18 @@ export default function HeroSection() {
                 bulbX = clientX - dragOffsetX;
                 bulbY = clientY - dragOffsetY;
 
-                const dx = bulbX - originX;
-                const dy = bulbY - originY;
+                const dx = bulbX - params.originX;
+                const dy = bulbY - params.originY;
                 const currentLength = Math.sqrt(dx * dx + dy * dy);
 
-                if (currentLength > maxStretch) {
-                    const ratio = maxStretch / currentLength;
-                    bulbX = originX + dx * ratio;
-                    bulbY = originY + dy * ratio;
-                } else if (currentLength < minRopeLength) {
-                    const ratio = minRopeLength / currentLength;
-                    bulbX = originX + dx * ratio;
-                    bulbY = originY + dy * ratio;
+                if (currentLength > params.maxStretch) {
+                    const ratio = params.maxStretch / currentLength;
+                    bulbX = params.originX + dx * ratio;
+                    bulbY = params.originY + dy * ratio;
+                } else if (currentLength < params.minRopeLength) {
+                    const ratio = params.minRopeLength / currentLength;
+                    bulbX = params.originX + dx * ratio;
+                    bulbY = params.originY + dy * ratio;
                 }
             }
         };
@@ -209,10 +256,12 @@ export default function HeroSection() {
         canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
         canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
         canvas.addEventListener('touchend', handlePointerUp);
+        canvas.addEventListener('touchcancel', handlePointerUp);
 
         function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
+            // Flicker effect
             if (isLightOn && flickerActive && !hasFlickered) {
                 flickerTimer++;
                 if (flickerTimer >= flickerDurationFrames) {
@@ -232,50 +281,47 @@ export default function HeroSection() {
                 lightIntensity = isLightOn ? 1.0 : 0.0;
             }
 
+            // Bulb physics
             if (!isDragging) {
-                const dx = bulbX - originX;
-                const dy = bulbY - originY;
+                const dx = bulbX - params.originX;
+                const dy = bulbY - params.originY;
                 const currentLength = Math.sqrt(dx * dx + dy * dy);
-                const stretch = currentLength - naturalRopeLength;
+                const stretch = currentLength - params.naturalRopeLength;
 
                 const springForce = -springConstant * stretch;
                 const springForceX = springForce * (dx / currentLength);
                 const springForceY = springForce * (dy / currentLength);
 
                 const stretchAmount = Math.abs(stretch);
-                const speedBoost = 1 + (stretchAmount / naturalRopeLength) * 1.5;
+                const speedBoost = 1 + (stretchAmount / params.naturalRopeLength) * 1.5;
 
                 const accelerationX = (springForceX * speedBoost) / mass;
                 const accelerationY = (springForceY * speedBoost) / mass + gravity;
 
                 velocityX += accelerationX;
                 velocityY += accelerationY;
-
                 velocityX *= damping;
                 velocityY *= damping;
-
                 bulbX += velocityX;
                 bulbY += velocityY;
 
-                const newDx = bulbX - originX;
-                const newDy = bulbY - originY;
+                const newDx = bulbX - params.originX;
+                const newDy = bulbY - params.originY;
                 const newLength = Math.sqrt(newDx * newDx + newDy * newDy);
 
-                if (newLength > maxStretch) {
-                    const ratio = maxStretch / newLength;
-                    bulbX = originX + newDx * ratio;
-                    bulbY = originY + newDy * ratio;
-
+                if (newLength > params.maxStretch) {
+                    const ratio = params.maxStretch / newLength;
+                    bulbX = params.originX + newDx * ratio;
+                    bulbY = params.originY + newDy * ratio;
                     const normalX = newDx / newLength;
                     const normalY = newDy / newLength;
                     const dotProduct = velocityX * normalX + velocityY * normalY;
                     velocityX -= 1.8 * dotProduct * normalX;
                     velocityY -= 1.8 * dotProduct * normalY;
-                } else if (newLength < minRopeLength) {
-                    const ratio = minRopeLength / newLength;
-                    bulbX = originX + newDx * ratio;
-                    bulbY = originY + newDy * ratio;
-
+                } else if (newLength < params.minRopeLength) {
+                    const ratio = params.minRopeLength / newLength;
+                    bulbX = params.originX + newDx * ratio;
+                    bulbY = params.originY + newDy * ratio;
                     const normalX = newDx / newLength;
                     const normalY = newDy / newLength;
                     const dotProduct = velocityX * normalX + velocityY * normalY;
@@ -290,28 +336,27 @@ export default function HeroSection() {
                 }
             }
 
+            // Switch physics
             if (!isSwitchDragging) {
                 const dx = switchX - switchOriginX;
                 const dy = switchY - switchOriginY;
                 const currentLength = Math.sqrt(dx * dx + dy * dy);
-                const stretch = currentLength - switchNaturalLength;
+                const stretch = currentLength - params.switchNaturalLength;
 
                 const springForce = -springConstant * stretch;
                 const springForceX = springForce * (dx / currentLength);
                 const springForceY = springForce * (dy / currentLength);
 
                 const stretchAmount = Math.abs(stretch);
-                const speedBoost = 1 + (stretchAmount / switchNaturalLength) * 1.5;
+                const speedBoost = 1 + (stretchAmount / params.switchNaturalLength) * 1.5;
 
                 const accelerationX = (springForceX * speedBoost) / mass;
                 const accelerationY = (springForceY * speedBoost) / mass + gravity;
 
                 switchVelocityX += accelerationX;
                 switchVelocityY += accelerationY;
-
                 switchVelocityX *= damping;
                 switchVelocityY *= damping;
-
                 switchX += switchVelocityX;
                 switchY += switchVelocityY;
 
@@ -319,21 +364,19 @@ export default function HeroSection() {
                 const newDy = switchY - switchOriginY;
                 const newLength = Math.sqrt(newDx * newDx + newDy * newDy);
 
-                if (newLength > switchMaxStretch) {
-                    const ratio = switchMaxStretch / newLength;
+                if (newLength > params.switchMaxStretch) {
+                    const ratio = params.switchMaxStretch / newLength;
                     switchX = switchOriginX + newDx * ratio;
                     switchY = switchOriginY + newDy * ratio;
-
                     const normalX = newDx / newLength;
                     const normalY = newDy / newLength;
                     const dotProduct = switchVelocityX * normalX + switchVelocityY * normalY;
                     switchVelocityX -= 1.8 * dotProduct * normalX;
                     switchVelocityY -= 1.8 * dotProduct * normalY;
-                } else if (newLength < switchMinLength) {
-                    const ratio = switchMinLength / newLength;
+                } else if (newLength < params.switchMinLength) {
+                    const ratio = params.switchMinLength / newLength;
                     switchX = switchOriginX + newDx * ratio;
                     switchY = switchOriginY + newDy * ratio;
-
                     const normalX = newDx / newLength;
                     const normalY = newDy / newLength;
                     const dotProduct = switchVelocityX * normalX + switchVelocityY * normalY;
@@ -348,70 +391,59 @@ export default function HeroSection() {
                 }
             }
 
-            const currentRopeLength = Math.sqrt(
-                (bulbX - originX) ** 2 + (bulbY - originY) ** 2
-            );
-            const ropeStretchRatio = currentRopeLength / naturalRopeLength;
+            // Update rope positions
+            const currentRopeLength = Math.sqrt((bulbX - params.originX) ** 2 + (bulbY - params.originY) ** 2);
+            const ropeStretchRatio = currentRopeLength / params.naturalRopeLength;
 
-            // Update visible rope-aligned instruction positions occasionally
-            // Convert canvas X to percentage of viewport width and only set
-            // state when the value changes more than 0.5px to avoid re-renders.
-            if (typeof setRopePositions === 'function') {
-                // Keep instruction anchored to the static rope origin (switchOriginX)
-                const switchPercent = (switchOriginX / canvas.width) * 100;
-                const prevSwitch = ropePosRef.switchX;
-                const switchDiff = Math.abs(switchPercent - prevSwitch);
-
-                if (frameCount % 12 === 0 || isSwitchDragging) {
-                    if (switchDiff > 0.05) {
-                        ropePosRef.switchX = switchPercent;
-                        setRopePositions((p) => ({ ...p, switchX: `${switchPercent}%` }));
-                    }
+            if (frameCount % 12 === 0 || isSwitchDragging) {
+                const switchPercent = (switchOriginX / window.innerWidth) * 100;
+                const switchDiff = Math.abs(switchPercent - ropePosRef.switchX);
+                if (switchDiff > 0.05) {
+                    ropePosRef.switchX = switchPercent;
+                    setRopePositions((p) => ({ ...p, switchX: `${switchPercent}%` }));
                 }
             }
 
-            // Calculate rope endpoint at bulb top instead of center
-            const bulbRopeDx = bulbX - originX;
-            const bulbRopeDy = bulbY - originY;
+            // Draw bulb rope
+            const bulbRopeDx = bulbX - params.originX;
+            const bulbRopeDy = bulbY - params.originY;
             const bulbRopeDist = Math.sqrt(bulbRopeDx * bulbRopeDx + bulbRopeDy * bulbRopeDy);
-            const bulbRopeEndX = bulbX - (bulbRopeDx / bulbRopeDist) * bulbRadius;
-            const bulbRopeEndY = bulbY - (bulbRopeDy / bulbRopeDist) * bulbRadius;
+            const bulbRopeEndX = bulbX - (bulbRopeDx / bulbRopeDist) * params.bulbRadius;
+            const bulbRopeEndY = bulbY - (bulbRopeDy / bulbRopeDist) * params.bulbRadius;
 
             ctx.beginPath();
             ctx.strokeStyle = isDragging ? "#FFD700" : "#888";
-            ctx.lineWidth = Math.max(1.5, 4 / ropeStretchRatio);
+            ctx.lineWidth = Math.max(1.5, 4 / ropeStretchRatio) * params.scaleFactor;
 
-            for (let i = 0; i <= segments; i++) {
-                const t = i / segments;
-                const x = originX + (bulbRopeEndX - originX) * t;
-                const curveAmount = 40 / Math.pow(ropeStretchRatio, 1.2);
+            for (let i = 0; i <= params.segments; i++) {
+                const t = i / params.segments;
+                const x = params.originX + (bulbRopeEndX - params.originX) * t;
+                const curveAmount = (40 / Math.pow(ropeStretchRatio, 1.2)) * params.scaleFactor;
                 const curve = Math.sin(Math.PI * t) * curveAmount;
-                const y = originY + (bulbRopeEndY - originY) * t + curve;
+                const y = params.originY + (bulbRopeEndY - params.originY) * t + curve;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
             ctx.stroke();
 
-            const currentSwitchLength = Math.sqrt(
-                (switchX - switchOriginX) ** 2 + (switchY - switchOriginY) ** 2
-            );
-            const switchStretchRatio = currentSwitchLength / switchNaturalLength;
+            // Draw switch rope
+            const currentSwitchLength = Math.sqrt((switchX - switchOriginX) ** 2 + (switchY - switchOriginY) ** 2);
+            const switchStretchRatio = currentSwitchLength / params.switchNaturalLength;
 
-            // Calculate rope endpoint at switch top instead of center
             const switchRopeDx = switchX - switchOriginX;
             const switchRopeDy = switchY - switchOriginY;
             const switchRopeDist = Math.sqrt(switchRopeDx * switchRopeDx + switchRopeDy * switchRopeDy);
-            const switchRopeEndX = switchX - (switchRopeDx / switchRopeDist) * switchRadius;
-            const switchRopeEndY = switchY - (switchRopeDy / switchRopeDist) * switchRadius;
+            const switchRopeEndX = switchX - (switchRopeDx / switchRopeDist) * params.switchRadius;
+            const switchRopeEndY = switchY - (switchRopeDy / switchRopeDist) * params.switchRadius;
 
             ctx.beginPath();
             ctx.strokeStyle = isSwitchDragging ? "#FFD700" : "#888";
-            ctx.lineWidth = Math.max(1.5, 4 / switchStretchRatio);
+            ctx.lineWidth = Math.max(1.5, 4 / switchStretchRatio) * params.scaleFactor;
 
-            for (let i = 0; i <= segments; i++) {
-                const t = i / segments;
+            for (let i = 0; i <= params.segments; i++) {
+                const t = i / params.segments;
                 const x = switchOriginX + (switchRopeEndX - switchOriginX) * t;
-                const curveAmount = 40 / Math.pow(switchStretchRatio, 1.2);
+                const curveAmount = (40 / Math.pow(switchStretchRatio, 1.2)) * params.scaleFactor;
                 const curve = Math.sin(Math.PI * t) * curveAmount;
                 const y = switchOriginY + (switchRopeEndY - switchOriginY) * t + curve;
                 if (i === 0) ctx.moveTo(x, y);
@@ -419,8 +451,9 @@ export default function HeroSection() {
             }
             ctx.stroke();
 
+            // Draw bulb glow
             if (lightIntensity > 0.5) {
-                const glowRadius = bulbRadius * 12;
+                const glowRadius = params.bulbRadius * 12;
                 const gradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, glowRadius);
                 gradient.addColorStop(0, `rgba(255, 240, 150, ${lightIntensity * 0.9})`);
                 gradient.addColorStop(0.2, `rgba(255, 220, 120, ${lightIntensity * 0.7})`);
@@ -434,9 +467,10 @@ export default function HeroSection() {
                 ctx.fill();
             }
 
+            // Draw bulb
             ctx.beginPath();
-            ctx.arc(bulbX, bulbY, bulbRadius, 0, Math.PI * 2);
-            const bulbGradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, bulbRadius);
+            ctx.arc(bulbX, bulbY, params.bulbRadius, 0, Math.PI * 2);
+            const bulbGradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, params.bulbRadius);
             if (lightIntensity > 0.5) {
                 bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${lightIntensity * 1.0})`);
                 bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${lightIntensity * 0.8})`);
@@ -449,31 +483,33 @@ export default function HeroSection() {
             ctx.fillStyle = bulbGradient;
             ctx.fill();
             ctx.strokeStyle = lightIntensity > 0.5 ? "#FFFFFF" : "#666";
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 * params.scaleFactor;
             ctx.stroke();
 
+            // Draw bulb filament
             ctx.beginPath();
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1 * params.scaleFactor;
             ctx.strokeStyle = lightIntensity > 0.5 ? `rgba(255, 255, 255, ${lightIntensity})` : `rgba(150, 150, 150, 0.5)`;
-            ctx.moveTo(bulbX - bulbRadius * 0.4, bulbY);
-            ctx.lineTo(bulbX - bulbRadius * 0.2, bulbY - bulbRadius * 0.3);
-            ctx.lineTo(bulbX + bulbRadius * 0.2, bulbY + bulbRadius * 0.3);
-            ctx.lineTo(bulbX + bulbRadius * 0.4, bulbY);
+            ctx.moveTo(bulbX - params.bulbRadius * 0.4, bulbY);
+            ctx.lineTo(bulbX - params.bulbRadius * 0.2, bulbY - params.bulbRadius * 0.3);
+            ctx.lineTo(bulbX + params.bulbRadius * 0.2, bulbY + params.bulbRadius * 0.3);
+            ctx.lineTo(bulbX + params.bulbRadius * 0.4, bulbY);
             ctx.stroke();
 
+            // Draw switch
             ctx.beginPath();
-            ctx.arc(switchX, switchY, switchRadius, 0, Math.PI * 2);
+            ctx.arc(switchX, switchY, params.switchRadius, 0, Math.PI * 2);
             ctx.fillStyle = "#E8E8E8";
             ctx.fill();
             ctx.strokeStyle = "#999";
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1.5 * params.scaleFactor;
             ctx.stroke();
 
-            // PERFORMANCE CRITICAL: Only update text every N frames
+            // Update text lighting
             frameCount++;
             if (frameCount % POSITION_CACHE_FRAMES === 0 && cachedPositions.length > 0) {
-                const maxDist = 400;
-                const maxDistSq = maxDist * maxDist; // Use squared distance to avoid sqrt
+                const maxDist = params.isMobileView ? 300 : params.isTabletView ? 350 : 400;
+                const maxDistSq = maxDist * maxDist;
 
                 for (let i = 0; i < cachedPositions.length; i++) {
                     const pos = cachedPositions[i];
@@ -504,12 +540,13 @@ export default function HeroSection() {
                 }
             }
 
-            requestAnimationFrame(draw);
+            animationFrameId = requestAnimationFrame(draw);
         }
 
         draw();
 
         return () => {
+            window.removeEventListener('resize', resizeCanvas);
             canvas.removeEventListener('mousedown', handlePointerDown);
             canvas.removeEventListener('mousemove', handlePointerMove);
             canvas.removeEventListener('mouseup', handlePointerUp);
@@ -517,19 +554,23 @@ export default function HeroSection() {
             canvas.removeEventListener('touchstart', handlePointerDown);
             canvas.removeEventListener('touchmove', handlePointerMove);
             canvas.removeEventListener('touchend', handlePointerUp);
+            canvas.removeEventListener('touchcancel', handlePointerUp);
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
         };
-    }, []);
+    }, [showSwitchHint]);
 
-    const subTextContent = "Hi, I’ve been building full-stack web products, working across frontend and backend to design complete systems. I focus on transforming complex requirements into structured, scalable architecture building applications that feel effortless for users but are carefully engineered behind the scenes to know more about me scroll down.";
+    const subTextContent = "Hi, I've been building full-stack web products, working across frontend and backend to design complete systems. I focus on transforming complex requirements into structured, scalable architecture building applications that feel effortless for users but are carefully engineered behind the scenes to know more about me scroll down.";
 
     return (
         <section className="relative w-full h-screen bg-black flex flex-col items-center justify-center overflow-hidden">
-            <canvas ref={canvasRef} className="absolute top-0 left-0" />
+            <canvas ref={canvasRef} className="absolute top-0 left-0 touch-none" />
 
-            <div className="flex flex-col items-center justify-center">
+            <div className="flex flex-col items-center justify-center px-4">
                 <h1
                     ref={textRef}
-                    className="text-[8vw] text-gray-800 font-bold tracking-widest z-10 pointer-events-none"
+                    className="text-[12vw] sm:text-[10vw] md:text-[8vw] lg:text-[7vw] text-gray-800 font-bold tracking-widest z-10 pointer-events-none text-center"
                 >
                     {"UJJAWAL".split("").map((ch, i) => (
                         <span
@@ -544,37 +585,33 @@ export default function HeroSection() {
                 </h1>
             </div>
 
-            {/* Instruction hint on switch rope (shows once) */}
             {showSwitchHint && !isLightOn && (
                 <div
-                    className="fixed top-1/4 z-20 animate-fade-in pointer-events-none"
+                    className="fixed z-20 animate-fade-in pointer-events-none px-4"
                     style={{
                         left: ropePositions.switchX,
+                        top: isMobile ? '20%' : '25%',
                         transform: 'translateX(-50%)',
                         transformOrigin: 'center center',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        maxWidth: '90vw'
                     }}
                 >
-                    <p className="text-xs md:text-sm text-gray-500 font-medium tracking-wide blink">
-                        Drag the button to turn on the bulb
+                    <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium tracking-wide blink text-center">
+                        {isMobile ? 'Tap the button to turn on' : 'Drag the button to turn on the bulb'}
                     </p>
                 </div>
             )}
 
-            {/* bulb instruction removed - only switch hint is shown */}
-
-            {/* Description - overlaid without affecting layout */}
-            <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 w-[70%] md:w-[50%] text-center z-10 pointer-events-none">
-                <p className="text-[1.3vw] md:text-[1.1vw] font-medium tracking-wide leading-relaxed min-h-[100px] transition-opacity duration-500">
+            <div className="absolute bottom-[15%] sm:bottom-[20%] md:bottom-[25%] left-1/2 transform -translate-x-1/2 w-[90%] sm:w-[80%] md:w-[70%] lg:w-[60%] xl:w-[50%] text-center z-10 pointer-events-none px-4">
+                <p className="text-[2.8vw] sm:text-[2.2vw] md:text-[1.6vw] lg:text-[1.3vw] xl:text-[1.1vw] font-medium tracking-wide leading-relaxed min-h-[60px] sm:min-h-[80px] md:min-h-[100px] transition-opacity duration-500">
                     {isLightOn ? (
                         <span>
                             {(() => {
-                                // Split into words and spaces so we wrap at word boundaries.
                                 const tokens = subTextContent.split(/(\s+)/);
                                 let letterIndex = 0;
                                 return tokens.map((token, ti) => {
                                     if (/^\s+$/.test(token)) {
-                                        // Render spaces with preserved whitespace so spacing remains.
                                         return (
                                             <span key={`sp-${ti}`} style={{ whiteSpace: 'pre' }}>
                                                 {token}
@@ -582,8 +619,6 @@ export default function HeroSection() {
                                         );
                                     }
 
-                                    // Render each word as an inline-block so the whole word
-                                    // wraps to the next line instead of breaking mid-word.
                                     return (
                                         <span key={`w-${ti}`} style={{ display: 'inline-block' }}>
                                             {token.split("").map((ch, j) => {
@@ -609,12 +644,40 @@ export default function HeroSection() {
                             })()}
                         </span>
                     ) : (
-                        <span className="text-gray-500 font-medium">
+                        <span className="text-gray-500 font-medium text-[3vw] sm:text-[2.5vw] md:text-[2vw] lg:text-[1.5vw]">
                             Turn on the bulb to know about me.
                         </span>
                     )}
                 </p>
             </div>
+
+            <style jsx>{`
+                @keyframes fade-in {
+                    from {
+                        opacity: 0;
+                    }
+                    to {
+                        opacity: 1;
+                    }
+                }
+                
+                .animate-fade-in {
+                    animation: fade-in 1s ease-in;
+                }
+                
+                @keyframes blink {
+                    0%, 49% {
+                        opacity: 1;
+                    }
+                    50%, 100% {
+                        opacity: 0.3;
+                    }
+                }
+                
+                .blink {
+                    animation: blink 2s infinite;
+                }
+            `}</style>
         </section>
     );
 }
