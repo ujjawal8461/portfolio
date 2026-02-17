@@ -634,13 +634,13 @@ export default function HeroSection() {
                         maxWidth: '90vw'
                     }}
                 >
-                    <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium tracking-wide blink text-center">
+                    <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium tracking-wide blink text-center" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
                         {isMobile ? 'Tap the button to turn on' : 'Drag the button to turn on the bulb'}
                     </p>
                 </div>
             )}
 
-            <div className="absolute bottom-[15%] sm:bottom-[20%] md:bottom-[25%] left-1/2 transform -translate-x-1/2 w-[90%] sm:w-[80%] md:w-[70%] lg:w-[60%] xl:w-[50%] text-center z-10 pointer-events-none px-4">
+            <div className="absolute bottom-[15%] sm:bottom-[20%] md:bottom-[25%] left-1/2 transform -translate-x-1/2 w-[90%] sm:w-[80%] md:w-[70%] lg:w-[60%] xl:w-[50%] text-center z-10 pointer-events-none px-4" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
                 <p className="text-[2.8vw] sm:text-[2.2vw] md:text-[1.6vw] lg:text-[1.3vw] xl:text-[1.1vw] font-medium tracking-wide leading-relaxed min-h-[60px] sm:min-h-[80px] md:min-h-[100px] transition-opacity duration-500">
                     {isLightOn ? (
                         <span>
@@ -681,8 +681,42 @@ export default function HeroSection() {
                             })()}
                         </span>
                     ) : (
-                        <span className="text-gray-500 font-medium text-[3vw] sm:text-[2.5vw] md:text-[2vw] lg:text-[1.5vw]">
-                            Turn on the bulb to know about me.
+                        <span>
+                            {(() => {
+                                const text = "Turn on the bulb to know about me.";
+                                let letterIndex = 0;
+                                const tokens = text.split(/(\s+)/);
+                                return tokens.map((token, ti) => {
+                                    if (/^\s+$/.test(token)) {
+                                        return (
+                                            <span key={`sp-${ti}`} style={{ whiteSpace: 'pre' }}>
+                                                {token}
+                                            </span>
+                                        );
+                                    }
+
+                                    return (
+                                        <span key={`w-${ti}`} style={{ display: 'inline-block' }}>
+                                            {token.split("").map((ch, j) => {
+                                                const idx = letterIndex++;
+                                                return (
+                                                    <span
+                                                        key={`l-${ti}-${j}`}
+                                                        className="inline-block"
+                                                        style={{
+                                                            color: "rgba(128,128,128,0.5)",
+                                                            whiteSpace: 'normal',
+                                                            willChange: 'color, text-shadow'
+                                                        }}
+                                                    >
+                                                        {ch}
+                                                    </span>
+                                                );
+                                            })}
+                                        </span>
+                                    );
+                                });
+                            })()}
                         </span>
                     )}
                 </p>
