@@ -143,7 +143,7 @@ export default function HeroSection() {
             // Log positions on resize for debugging
             const bulbPositionPercent = (params.originX / window.innerWidth) * 100;
             const switchPositionPercent = (switchOriginX / window.innerWidth) * 100;
-            
+
             let deviceType = '';
             if (window.innerWidth < 768) {
                 deviceType = 'MOBILE';
@@ -634,8 +634,8 @@ export default function HeroSection() {
                         maxWidth: '90vw'
                     }}
                 >
-                    <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium tracking-wide blink text-center" style={{ fontFamily: 'var(--font-space-grotesk)' }}>
-                        {isMobile ? 'Tap the button to turn on' : 'Drag the button to turn on the bulb'}
+                    <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium tracking-wide pulse-glow text-center" style={{ fontFamily: 'var(--font-space-grotesk)', willChange: 'text-shadow, opacity' }}>
+                        {"Turn on the bulb to know about me."}
                     </p>
                 </div>
             )}
@@ -724,29 +724,35 @@ export default function HeroSection() {
 
             <style jsx>{`
                 @keyframes fade-in {
-                    from {
-                        opacity: 0;
-                    }
-                    to {
-                        opacity: 1;
-                    }
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
-                
+
                 .animate-fade-in {
-                    animation: fade-in 1s ease-in;
+                    animation: fade-in 600ms cubic-bezier(.2,.8,.2,1) both;
                 }
-                
-                @keyframes blink {
-                    0%, 49% {
+
+                @keyframes pulse-glow-frames {
+                    0% {
                         opacity: 1;
+                        text-shadow: 0 0 0 rgba(255,215,0,0);
+                        color: rgba(128,128,128,0.95);
                     }
-                    50%, 100% {
-                        opacity: 0.3;
+                    50% {
+                        opacity: 1;
+                        text-shadow: 0 0 8px rgba(255,215,0,0.9), 0 0 20px rgba(255,200,0,0.55);
+                        color: rgba(255,215,0,0.95);
+                    }
+                    100% {
+                        opacity: 1;
+                        text-shadow: 0 0 0 rgba(255,215,0,0);
+                        color: rgba(128,128,128,0.95);
                     }
                 }
-                
-                .blink {
-                    animation: blink 2s infinite;
+
+                .pulse-glow {
+                    animation: pulse-glow-frames 2200ms ease-in-out infinite;
+                    will-change: text-shadow, color, opacity;
                 }
             `}</style>
         </section>
