@@ -544,37 +544,49 @@ export default function HeroSection() {
 
             // Update text lighting
             frameCount++;
-            if (frameCount % POSITION_CACHE_FRAMES === 0 && cachedPositions.length > 0) {
-                const maxDist = params.isMobileView ? 300 : params.isTabletView ? 350 : 400;
-                const maxDistSq = maxDist * maxDist;
+            const maxDist = params.isMobileView ? 300 : params.isTabletView ? 350 : 400;
+            const maxDistSq = maxDist * maxDist;
 
-                for (let i = 0; i < cachedPositions.length; i++) {
-                    const pos = cachedPositions[i];
-                    const dx = bulbX - pos.x;
-                    const dy = bulbY - pos.y;
+            // When bulb is ON, update every frame so all characters glow continuously.
+            if (isLightOn) {
+                const applyGlow = (el: HTMLSpanElement | undefined) => {
+                    if (!el) return;
+                    const rect = el.getBoundingClientRect();
+                    const cx = rect.left + rect.width / 2;
+                    const cy = rect.top + rect.height / 2;
+                    const dx = bulbX - cx;
+                    const dy = bulbY - cy;
                     const distSq = dx * dx + dy * dy;
 
                     if (distSq > maxDistSq) {
-                        pos.element.style.color = 'rgba(128,128,128,0.5)';
-                        pos.element.style.textShadow = 'none';
+                        el.style.color = 'rgba(128,128,128,0.5)';
+                        el.style.textShadow = 'none';
                     } else {
                         const distance = Math.sqrt(distSq);
                         const intensity = (1 - distance / maxDist) * lightIntensity;
-
-                        if (intensity > 0.1) {
-                            pos.element.style.color = `rgba(255,215,0,${intensity})`;
-                            if (intensity > 0.05) {
-                                const glow1 = 20 * intensity;
-                                const glow2 = 40 * intensity;
-                                const opacity2 = intensity * 0.7;
-                                pos.element.style.textShadow = `0 0 ${glow1}px rgba(255,255,150,${intensity}),0 0 ${glow2}px rgba(255,255,200,${opacity2})`;
-                            }
-                        } else {
-                            pos.element.style.color = 'rgba(128,128,128,0.5)';
-                            pos.element.style.textShadow = 'none';
-                        }
+                        const visibleIntensity = Math.max(0.25, intensity);
+                        el.style.color = `rgba(255,215,0,${visibleIntensity})`;
+                        const glow1 = 12 * intensity;
+                        const glow2 = 28 * intensity;
+                        const opacity2 = Math.min(0.85, intensity * 0.8);
+                        el.style.textShadow = `0 0 ${glow1}px rgba(255,255,150,${intensity}),0 0 ${glow2}px rgba(255,200,0,${opacity2})`;
                     }
-                }
+                };
+
+                letterRefs.current.forEach((el) => applyGlow(el));
+                subTextLetterRefs.current.forEach((el) => applyGlow(el));
+            } else if (frameCount % POSITION_CACHE_FRAMES === 0) {
+                // When bulb is OFF, update less frequently: reset to muted styles.
+                letterRefs.current.forEach((el) => {
+                    if (!el) return;
+                    el.style.color = 'rgba(128,128,128,0.5)';
+                    el.style.textShadow = 'none';
+                });
+                subTextLetterRefs.current.forEach((el) => {
+                    if (!el) return;
+                    el.style.color = 'rgba(128,128,128,0.5)';
+                    el.style.textShadow = 'none';
+                });
             }
 
             animationFrameId = requestAnimationFrame(draw);
