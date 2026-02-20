@@ -1,369 +1,285 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import {
+    SiC, SiCplusplus, SiJavascript, SiTypescript,
+    SiHtml5, SiCss3, SiMongodb, SiReact, SiExpress, SiNodedotjs,
+    SiNextdotjs, SiTailwindcss, SiBootstrap, SiSass,
+    SiGraphql, SiRedux, SiMysql, SiPostgresql, SiPrisma,
+    SiVscodium, SiPostman, SiGit, SiGithub, SiBitbucket,
+    SiJira, SiAndroidstudio, SiFigma, SiCanva, SiVercel,
+    SiRedis, SiSwagger, SiJest, SiDocker
+} from "react-icons/si";
+import { IconType } from "react-icons";
 
-interface SkillNode {
+type Category = "all" | "language" | "webdev" | "frontend" | "backend" | "statemanagement" | "database" | "tools";
+
+interface SkillItem {
     id: number;
     name: string;
-    branch: "frontend" | "backend" | "database" | "tools";
-    position: number;
+    Icon: IconType;
+    categories: Category[];
+    x: number; // % from left
+    y: number; // % from top
+    size: number; // icon size in px
+    rotate: number; // slight rotation
 }
 
-export default function SkillsSection() {
-    const sectionRef = useRef<HTMLDivElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [scrollProgress, setScrollProgress] = useState(0);
-    const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 900 });
+const rawSkills: Omit<SkillItem, "x" | "y" | "size" | "rotate">[] = [
+    { id: 1, name: "C", Icon: SiC, categories: ["language"] },
+    { id: 2, name: "C++", Icon: SiCplusplus, categories: ["language"] },
+    { id: 3, name: "JavaScript", Icon: SiJavascript, categories: ["language", "webdev", "frontend"] },
+    { id: 4, name: "TypeScript", Icon: SiTypescript, categories: ["language", "frontend"] },
+    { id: 5, name: "HTML", Icon: SiHtml5, categories: ["webdev", "frontend"] },
+    { id: 6, name: "CSS", Icon: SiCss3, categories: ["webdev", "frontend"] },
+    { id: 7, name: "MongoDB", Icon: SiMongodb, categories: ["webdev", "database"] },
+    { id: 8, name: "React", Icon: SiReact, categories: ["webdev", "frontend"] },
+    { id: 9, name: "Express", Icon: SiExpress, categories: ["webdev", "backend"] },
+    { id: 10, name: "Node.js", Icon: SiNodedotjs, categories: ["webdev", "backend"] },
+    { id: 11, name: "Next.js", Icon: SiNextdotjs, categories: ["webdev", "frontend"] },
+    { id: 12, name: "Tailwind", Icon: SiTailwindcss, categories: ["frontend"] },
+    { id: 13, name: "Bootstrap", Icon: SiBootstrap, categories: ["frontend"] },
+    { id: 14, name: "Sass", Icon: SiSass, categories: ["frontend"] },
+    { id: 15, name: "GraphQL", Icon: SiGraphql, categories: ["backend"] },
+    { id: 16, name: "Redux", Icon: SiRedux, categories: ["statemanagement"] },
+    { id: 17, name: "MySQL", Icon: SiMysql, categories: ["database"] },
+    { id: 18, name: "PostgreSQL", Icon: SiPostgresql, categories: ["database"] },
+    { id: 19, name: "Prisma", Icon: SiPrisma, categories: ["database"] },
+    { id: 20, name: "VS Code", Icon: SiVscodium, categories: ["tools"] },
+    { id: 21, name: "Postman", Icon: SiPostman, categories: ["tools"] },
+    { id: 22, name: "Git", Icon: SiGit, categories: ["tools"] },
+    { id: 23, name: "GitHub", Icon: SiGithub, categories: ["tools"] },
+    { id: 24, name: "Bitbucket", Icon: SiBitbucket, categories: ["tools"] },
+    { id: 25, name: "Jira", Icon: SiJira, categories: ["tools"] },
+    { id: 26, name: "Android Studio", Icon: SiAndroidstudio, categories: ["tools"] },
+    { id: 27, name: "Figma", Icon: SiFigma, categories: ["tools"] },
+    { id: 28, name: "Canva", Icon: SiCanva, categories: ["tools"] },
+    { id: 29, name: "Vercel", Icon: SiVercel, categories: ["tools"] },
+    { id: 30, name: "Redis", Icon: SiRedis, categories: ["backend"] },
+    { id: 31, name: "Swagger", Icon: SiSwagger, categories: ["backend"] },
+    { id: 32, name: "Jest", Icon: SiJest, categories: ["backend"] },
+    { id: 33, name: "Docker", Icon: SiDocker, categories: ["tools"] },
+    { id: 34, name: "React Hook Form", Icon: SiReact, categories: ["frontend"] },
+    { id: 35, name: "Context API", Icon: SiReact, categories: ["statemanagement"] },
+    { id: 36, name: "Redux Toolkit", Icon: SiRedux, categories: ["statemanagement"] },
+    { id: 37, name: "Knex", Icon: SiNodedotjs, categories: ["database"] },
+    { id: 38, name: "pgAdmin", Icon: SiPostgresql, categories: ["tools"] },
+];
 
-    const skills: SkillNode[] = [
-        // Frontend
-        { id: 1, name: "HTML", branch: "frontend", position: 0.1 },
-        { id: 2, name: "CSS", branch: "frontend", position: 0.15 },
-        { id: 3, name: "JavaScript", branch: "frontend", position: 0.2 },
-        { id: 4, name: "TypeScript", branch: "frontend", position: 0.25 },
-        { id: 5, name: "React.js", branch: "frontend", position: 0.3 },
-        { id: 6, name: "Next.js", branch: "frontend", position: 0.35 },
-        { id: 7, name: "Tailwind", branch: "frontend", position: 0.4 },
-        { id: 8, name: "Redux", branch: "frontend", position: 0.45 },
+// Deterministic pseudo-random layout — no Math.random() on render
+function seededLayout(skills: typeof rawSkills): SkillItem[] {
+    // Simple LCG seeded random for deterministic placement
+    let seed = 42;
+    const rand = () => {
+        seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+        return (seed >>> 0) / 0xffffffff;
+    };
 
-        // Backend
-        { id: 9, name: "Node.js", branch: "backend", position: 0.55 },
-        { id: 10, name: "Express.js", branch: "backend", position: 0.6 },
-        { id: 11, name: "REST API", branch: "backend", position: 0.65 },
-        { id: 12, name: "GraphQL", branch: "backend", position: 0.7 },
-        { id: 13, name: "JWT", branch: "backend", position: 0.75 },
-
-        // Database
-        { id: 14, name: "MySQL", branch: "database", position: 0.82 },
-        { id: 15, name: "MongoDB", branch: "database", position: 0.87 },
-        { id: 16, name: "PostgreSQL", branch: "database", position: 0.92 },
-
-        // Tools
-        { id: 17, name: "Git", branch: "tools", position: 0.97 },
-        { id: 18, name: "GitHub", branch: "tools", position: 1.02 },
-        { id: 19, name: "Docker", branch: "tools", position: 1.07 },
-        { id: 20, name: "Vercel", branch: "tools", position: 1.12 }
+    // Define zones to spread icons across the full canvas
+    // Avoid center area (where heading/categories sit)
+    const zones = [
+        { xMin: 2, xMax: 18, yMin: 5, yMax: 85 },    // far left column
+        { xMin: 18, xMax: 35, yMin: 3, yMax: 40 },   // upper-mid-left
+        { xMin: 18, xMax: 35, yMin: 58, yMax: 95 },  // lower-mid-left
+        { xMin: 65, xMax: 82, yMin: 3, yMax: 40 },   // upper-mid-right
+        { xMin: 65, xMax: 82, yMin: 58, yMax: 95 },  // lower-mid-right
+        { xMin: 82, xMax: 98, yMin: 5, yMax: 85 },   // far right column
+        { xMin: 35, xMax: 50, yMin: 3, yMax: 20 },   // top-center-left
+        { xMin: 50, xMax: 65, yMin: 3, yMax: 20 },   // top-center-right
+        { xMin: 35, xMax: 50, yMin: 78, yMax: 95 },  // bottom-center-left
+        { xMin: 50, xMax: 65, yMin: 78, yMax: 95 },  // bottom-center-right
     ];
 
-    const branchStarts = {
-        frontend: 0.05,
-        backend: 0.5,
-        database: 0.8,
-        tools: 0.95
-    };
+    return skills.map((skill, i) => {
+        const zone = zones[i % zones.length];
+        const x = zone.xMin + rand() * (zone.xMax - zone.xMin);
+        const y = zone.yMin + rand() * (zone.yMax - zone.yMin);
+        const size = 28 + Math.floor(rand() * 22); // 28–50px
+        const rotate = (rand() - 0.5) * 20; // -10 to +10 deg
+        return { ...skill, x, y, size, rotate };
+    });
+}
+
+const skills: SkillItem[] = seededLayout(rawSkills);
+
+const categories: { key: Category; label: string }[] = [
+    { key: "language", label: "Language" },
+    { key: "webdev", label: "Web Dev" },
+    { key: "frontend", label: "Frontend" },
+    { key: "backend", label: "Backend" },
+    { key: "statemanagement", label: "State Mgmt" },
+    { key: "database", label: "Database" },
+    { key: "tools", label: "Tools" },
+];
+
+export default function SkillsSection() {
+    const [activeCategory, setActiveCategory] = useState<Category>("all");
+    const [hoveredSkill, setHoveredSkill] = useState<number | null>(null);
+    const [tooltip, setTooltip] = useState<{ id: number; x: number; y: number } | null>(null);
+    const sectionRef = useRef<HTMLDivElement>(null);
+    const [scrollProgress, setScrollProgress] = useState(0);
 
     useEffect(() => {
         const section = sectionRef.current;
         if (!section) return;
-
         const handleScroll = () => {
             const rect = section.getBoundingClientRect();
-            const windowHeight = window.innerHeight;
-
-            if (rect.top <= 0 && rect.bottom > windowHeight) {
-                const scrolledPastTop = -rect.top;
-                const sectionScrollHeight = rect.height - windowHeight;
-                const progress = Math.max(0, Math.min(1, scrolledPastTop / sectionScrollHeight));
-                setScrollProgress(progress);
-            } else if (rect.top > 0) {
-                setScrollProgress(0);
-            } else if (rect.bottom <= windowHeight) {
-                setScrollProgress(1);
-            }
+            const wh = window.innerHeight;
+            if (rect.top <= 0 && rect.bottom > wh) {
+                const p = Math.max(0, Math.min(1, -rect.top / (rect.height - wh)));
+                setScrollProgress(p);
+            } else if (rect.top > 0) setScrollProgress(0);
+            else setScrollProgress(1);
         };
-
         handleScroll();
-        window.addEventListener("scroll", handleScroll);
-
-        return () => {
-            window.removeEventListener("scroll", handleScroll);
-        };
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+    const isSkillLit = useCallback((skill: SkillItem) => {
+        if (hoveredSkill === skill.id) return true;
+        if (activeCategory === "all") return false;
+        return skill.categories.includes(activeCategory);
+    }, [activeCategory, hoveredSkill]);
 
-        const ctx = canvas.getContext("2d")!;
-
-        const resizeCanvas = () => {
-            const width = Math.min(window.innerWidth * 0.9, 1000);
-            const height = Math.min(window.innerHeight * 0.85, 900);
-
-            setCanvasSize({ width, height });
-
-            canvas.width = width;
-            canvas.height = height;
-            canvas.style.width = `${width}px`;
-            canvas.style.height = `${height}px`;
-        };
-
-        resizeCanvas();
-        window.addEventListener("resize", resizeCanvas);
-
-        let animationFrame: number;
-
-        const animate = () => {
-            ctx.clearRect(0, 0, canvasSize.width, canvasSize.height);
-
-            const centerX = canvasSize.width / 2;
-            const startY = 80;
-            const endY = canvasSize.height - 50;
-            const totalHeight = endY - startY;
-
-            // Draw main vertical trunk
-            ctx.strokeStyle = "#888";
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(centerX, startY);
-            ctx.lineTo(centerX, endY);
-            ctx.stroke();
-
-            // Draw powered portion of trunk
-            if (scrollProgress > 0.05) {
-                const poweredY = startY + totalHeight * Math.min(scrollProgress * 1.3, 1.15);
-                ctx.strokeStyle = "#FFD700";
-                ctx.lineWidth = 5;
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
-                ctx.beginPath();
-                ctx.moveTo(centerX, startY);
-                ctx.lineTo(centerX, Math.min(poweredY, endY));
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-
-                // Energy particle on trunk
-                if (poweredY < endY) {
-                    ctx.beginPath();
-                    ctx.arc(centerX, poweredY, 8, 0, Math.PI * 2);
-                    ctx.fillStyle = "#FFF";
-                    ctx.shadowBlur = 25;
-                    ctx.shadowColor = "rgba(255, 255, 0, 1)";
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
-                }
-            }
-
-            // Draw horizontal branches
-            Object.entries(branchStarts).forEach(([branch, startPos]) => {
-                const branchY = startY + totalHeight * startPos;
-                const branchLength = 150;
-                const isLeft = branch === "frontend" || branch === "database";
-                const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
-
-                // Draw branch connector
-                ctx.strokeStyle = "#888";
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.moveTo(centerX, branchY);
-                ctx.lineTo(branchEndX, branchY);
-                ctx.stroke();
-
-                // Check if powered
-                if (scrollProgress * 1.3 > startPos) {
-                    ctx.strokeStyle = "#FFD700";
-                    ctx.lineWidth = 4;
-                    ctx.shadowBlur = 25;
-                    ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
-                    ctx.beginPath();
-                    ctx.moveTo(centerX, branchY);
-                    ctx.lineTo(branchEndX, branchY);
-                    ctx.stroke();
-                    ctx.shadowBlur = 0;
-                }
+    const handleMouseEnter = (skill: SkillItem, e: React.MouseEvent) => {
+        setHoveredSkill(skill.id);
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const parentRect = sectionRef.current?.getBoundingClientRect();
+        if (parentRect) {
+            setTooltip({
+                id: skill.id,
+                x: rect.left - parentRect.left + rect.width / 2,
+                y: rect.top - parentRect.top - 36,
             });
+        }
+    };
 
-            // Draw skill nodes
-            skills.forEach((skill) => {
-                const nodeY = startY + totalHeight * skill.position;
-                const branchStart = branchStarts[skill.branch];
-                const branchY = startY + totalHeight * branchStart;
-                const branchLength = 150;
-                const isLeft = skill.branch === "frontend" || skill.branch === "database";
-                const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
-
-                const isPowered = scrollProgress * 1.3 > skill.position;
-                const nodeRadius = 12;
-
-                // Node glow if powered
-                if (isPowered) {
-                    const pulseTime = Date.now() / 1000;
-                    const pulse = Math.sin(pulseTime * 2 + skill.id) * 0.15 + 0.85;
-
-                    const glowRadius = nodeRadius * 6;
-                    const gradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, glowRadius);
-                    gradient.addColorStop(0, `rgba(255, 240, 150, ${pulse * 0.4})`);
-                    gradient.addColorStop(0.5, `rgba(255, 200, 100, ${pulse * 0.2})`);
-                    gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
-
-                    ctx.beginPath();
-                    ctx.arc(branchEndX, nodeY, glowRadius, 0, Math.PI * 2);
-                    ctx.fillStyle = gradient;
-                    ctx.fill();
-                }
-
-                // Draw node circle
-                ctx.beginPath();
-                ctx.arc(branchEndX, nodeY, nodeRadius, 0, Math.PI * 2);
-
-                if (isPowered) {
-                    const pulseTime = Date.now() / 1000;
-                    const pulse = Math.sin(pulseTime * 2 + skill.id) * 0.2 + 0.8;
-
-                    const bulbGradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, nodeRadius);
-                    bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${pulse})`);
-                    bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${pulse * 0.8})`);
-                    bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${pulse * 0.6})`);
-                    ctx.fillStyle = bulbGradient;
-                    ctx.fill();
-
-                    ctx.shadowBlur = 30 * pulse;
-                    ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
-                    ctx.strokeStyle = "#FFFFFF";
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    ctx.shadowBlur = 0;
-                } else {
-                    const inactiveGradient = ctx.createRadialGradient(branchEndX, nodeY, 0, branchEndX, nodeY, nodeRadius);
-                    inactiveGradient.addColorStop(0, `rgba(200, 200, 200, 0.3)`);
-                    inactiveGradient.addColorStop(0.7, `rgba(150, 150, 150, 0.4)`);
-                    inactiveGradient.addColorStop(1, `rgba(100, 100, 100, 0.5)`);
-                    ctx.fillStyle = inactiveGradient;
-                    ctx.fill();
-                    ctx.strokeStyle = "#666";
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
-
-                // Draw small box around node
-                ctx.strokeStyle = isPowered ? "rgba(255, 215, 0, 0.4)" : "rgba(128, 128, 128, 0.4)";
-                ctx.lineWidth = 1;
-                ctx.strokeRect(branchEndX - 8, nodeY - 8, 16, 16);
-            });
-
-            animationFrame = requestAnimationFrame(animate);
-        };
-
-        animate();
-
-        return () => {
-            cancelAnimationFrame(animationFrame);
-            window.removeEventListener("resize", resizeCanvas);
-        };
-    }, [scrollProgress, canvasSize.width, canvasSize.height]);
-
-    const isSkillPowered = (skill: SkillNode) => {
-        return scrollProgress * 1.3 > skill.position;
+    const handleMouseLeave = () => {
+        setHoveredSkill(null);
+        setTooltip(null);
     };
 
     return (
         <section
             ref={sectionRef}
             className="relative w-full bg-black"
-            style={{ height: "300vh" }}
+            style={{ minHeight: "100vh" }}
         >
-            <div className="sticky top-0 h-screen overflow-hidden flex flex-col items-center justify-center py-8 px-4">
+            <div className="sticky top-0 h-screen overflow-hidden flex flex-col items-center justify-center">
+
+                {/* Heading */}
                 <h2
-                    className="text-center text-5xl md:text-6xl font-bold mb-12 tracking-[0.25em] uppercase"
+                    className="text-center text-5xl md:text-7xl font-bold tracking-[0.3em] uppercase mb-6 z-10 relative"
                     style={{
-                        color: scrollProgress > 0.05 ? "#FFD700" : "#888",
-                        textShadow: scrollProgress > 0.05 ? "0 0 50px rgba(255,215,0,0.5)" : "none",
-                        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
+                        color: scrollProgress > 0.02 ? "#FFD700" : "#888",
+                        textShadow: scrollProgress > 0.02
+                            ? "0 0 60px rgba(255,215,0,0.6), 0 0 100px rgba(255,215,0,0.3)"
+                            : "none",
+                        transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+                        fontFamily: "system-ui, -apple-system, sans-serif"
                     }}
                 >
                     SKILLS
                 </h2>
 
-                <div className="relative flex justify-center items-center flex-1 w-full">
-                    <div className="relative">
-                        <canvas ref={canvasRef} />
-
-                        {/* Branch labels */}
-                        {Object.entries(branchStarts).map(([branch, startPos]) => {
-                            const centerX = canvasSize.width / 2;
-                            const startY = 80;
-                            const endY = canvasSize.height - 50;
-                            const totalHeight = endY - startY;
-                            const branchY = startY + totalHeight * startPos;
-                            const branchLength = 150;
-                            const isLeft = branch === "frontend" || branch === "database";
-                            const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
-                            const isPowered = scrollProgress * 1.3 > startPos;
-
-                            return (
-                                <div
-                                    key={branch}
-                                    className="absolute pointer-events-none"
-                                    style={{
-                                        left: isLeft ? `${branchEndX - 180}px` : `${branchEndX + 25}px`,
-                                        top: `${branchY - 30}px`,
-                                        textAlign: isLeft ? "right" : "left",
-                                        width: "150px"
-                                    }}
-                                >
-                                    <span
-                                        className="text-xl font-bold tracking-wider uppercase block mb-1"
-                                        style={{
-                                            color: isPowered ? "#FFD700" : "#888",
-                                            textShadow: isPowered ? "0 0 20px rgba(255,215,0,0.6)" : "none",
-                                            transition: "all 0.3s ease"
-                                        }}
-                                    >
-                                        {branch}
-                                    </span>
-                                </div>
-                            );
-                        })}
-
-                        {/* Skill labels */}
-                        {skills.map((skill) => {
-                            const centerX = canvasSize.width / 2;
-                            const startY = 80;
-                            const endY = canvasSize.height - 50;
-                            const totalHeight = endY - startY;
-                            const nodeY = startY + totalHeight * skill.position;
-                            const branchLength = 150;
-                            const isLeft = skill.branch === "frontend" || skill.branch === "database";
-                            const branchEndX = isLeft ? centerX - branchLength : centerX + branchLength;
-                            const isPowered = isSkillPowered(skill);
-                            const intensity = isPowered ? 1 : 0;
-
-                            return (
-                                <div
-                                    key={skill.id}
-                                    className="absolute pointer-events-none"
-                                    style={{
-                                        left: isLeft ? `${branchEndX - 180}px` : `${branchEndX + 25}px`,
-                                        top: `${nodeY - 10}px`,
-                                        textAlign: isLeft ? "right" : "left",
-                                        width: "150px"
-                                    }}
-                                >
-                                    <span
-                                        className="text-base font-semibold"
-                                        style={{
-                                            color: isPowered ? `rgba(255, 240, 180, ${0.95 * intensity})` : "#888",
-                                            textShadow: isPowered ? `0 0 ${15 * intensity}px rgba(255,255,150,${intensity * 0.6})` : "none",
-                                            transition: "all 0.3s ease"
-                                        }}
-                                    >
-                                        {skill.name}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
+                {/* Category pills */}
+                <div className="flex flex-wrap justify-center gap-2 mb-4 px-4 z-10 relative">
+                    {categories.map((cat) => {
+                        const isActive = activeCategory === cat.key;
+                        return (
+                            <button
+                                key={cat.key}
+                                onClick={() => setActiveCategory(isActive ? "all" : cat.key)}
+                                onMouseEnter={() => !isActive && setActiveCategory(cat.key)}
+                                onMouseLeave={() => !isActive && setActiveCategory("all")}
+                                className="px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase transition-all duration-300 border cursor-pointer"
+                                style={{
+                                    background: isActive
+                                        ? "rgba(255,215,0,0.18)"
+                                        : "rgba(255,255,255,0.03)",
+                                    borderColor: isActive
+                                        ? "rgba(255,215,0,0.7)"
+                                        : "rgba(255,255,255,0.1)",
+                                    color: isActive ? "#FFD700" : "#666",
+                                    boxShadow: isActive
+                                        ? "0 0 20px rgba(255,215,0,0.3)"
+                                        : "none",
+                                }}
+                            >
+                                {cat.label}
+                            </button>
+                        );
+                    })}
                 </div>
 
+                {/* Icon collage canvas */}
                 <div
-                    className="text-center text-xs tracking-[0.35em] uppercase mt-6"
-                    style={{
-                        color: scrollProgress < 0.95 ? "#555" : "#222",
-                        transition: "all 0.5s ease"
-                    }}
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{ zIndex: 1 }}
                 >
-                    {/* Scroll to energize skill tree */}
+                    {skills.map((skill) => {
+                        const lit = isSkillLit(skill);
+                        const Icon = skill.Icon;
+
+                        return (
+                            <div
+                                key={skill.id}
+                                className="absolute pointer-events-auto cursor-pointer"
+                                style={{
+                                    left: `${skill.x}%`,
+                                    top: `${skill.y}%`,
+                                    transform: `translate(-50%, -50%) rotate(${skill.rotate}deg)`,
+                                    transition: "filter 0.3s ease, opacity 0.3s ease, transform 0.2s ease",
+                                    opacity: lit ? 1 : 0.28,
+                                    filter: lit
+                                        ? `drop-shadow(0 0 8px rgba(255,215,0,0.9)) drop-shadow(0 0 20px rgba(255,215,0,0.5))`
+                                        : "grayscale(1) brightness(0.5)",
+                                    zIndex: lit ? 20 : 5,
+                                    willChange: "filter, opacity",
+                                }}
+                                onMouseEnter={(e) => handleMouseEnter(skill, e)}
+                                onMouseLeave={handleMouseLeave}
+                            >
+                                <Icon
+                                    size={skill.size}
+                                    color={lit ? "#FFD700" : "#888"}
+                                    style={{ transition: "color 0.3s ease", display: "block" }}
+                                />
+                            </div>
+                        );
+                    })}
+
+                    {/* Tooltip */}
+                    {tooltip && hoveredSkill !== null && (
+                        <div
+                            className="absolute pointer-events-none z-30 px-3 py-1 rounded-md text-xs font-bold tracking-wider uppercase whitespace-nowrap"
+                            style={{
+                                left: `${tooltip.x}px`,
+                                top: `${tooltip.y}px`,
+                                transform: "translateX(-50%)",
+                                background: "rgba(0,0,0,0.85)",
+                                border: "1px solid rgba(255,215,0,0.5)",
+                                color: "#FFD700",
+                                boxShadow: "0 0 16px rgba(255,215,0,0.3)",
+                                fontFamily: "system-ui, -apple-system, sans-serif",
+                            }}
+                        >
+                            {skills.find((s) => s.id === hoveredSkill)?.name}
+                        </div>
+                    )}
                 </div>
+
+                {/* Subtle ambient glow when category active */}
+                {activeCategory !== "all" && (
+                    <div
+                        className="absolute inset-0 pointer-events-none z-0"
+                        style={{
+                            background:
+                                "radial-gradient(ellipse at center, rgba(255,215,0,0.03) 0%, transparent 70%)",
+                        }}
+                    />
+                )}
             </div>
         </section>
     );
