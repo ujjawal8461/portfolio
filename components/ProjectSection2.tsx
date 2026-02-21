@@ -50,7 +50,7 @@ export default function ProjectsSection() {
             name: "Portfolio",
             description: "This very site. Built with Next.js, canvas physics, and scroll-driven animations.",
             techStack: ["Next.js", "TypeScript", "Canvas API", "Tailwind"],
-            liveUrl: null,
+            liveUrl: "https://portfolio-2vp679nf2-ujjawal-singh-solankis-projects.vercel.app/",
             githubUrl: "https://github.com/ujjawal8461/portfolio.git",
             unlockAt: 0.65
         },
