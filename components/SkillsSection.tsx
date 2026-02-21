@@ -6,10 +6,11 @@ import {
     SiHtml5, SiCss3, SiMongodb, SiReact, SiExpress, SiNodedotjs,
     SiNextdotjs, SiTailwindcss, SiBootstrap, SiSass,
     SiGraphql, SiRedux, SiMysql, SiPostgresql, SiPrisma,
-    SiVscodium, SiPostman, SiGit, SiGithub, SiBitbucket,
+    SiPostman, SiGit, SiGithub, SiBitbucket,
     SiJira, SiAndroidstudio, SiFigma, SiCanva, SiVercel,
-    SiRedis, SiSwagger, SiJest, SiDocker
+    SiRedis, SiSwagger, SiJest, SiDocker, SiZod, SiJsonwebtokens,
 } from "react-icons/si";
+import { VscVscode } from "react-icons/vsc";
 import { IconType } from "react-icons";
 
 type Category = "all" | "language" | "webdev" | "frontend" | "backend" | "statemanagement" | "database" | "tools";
@@ -17,15 +18,24 @@ type Category = "all" | "language" | "webdev" | "frontend" | "backend" | "statem
 interface SkillItem {
     id: number;
     name: string;
-    Icon: IconType;
+    Icon?: IconType;
+    textIcon?: string;
     categories: Category[];
-    x: number; // % from left
-    y: number; // % from top
-    size: number; // icon size in px
-    rotate: number; // slight rotation
+    x: number;
+    y: number;
+    size: number;
+    rotate: number;
 }
 
-const rawSkills: Omit<SkillItem, "x" | "y" | "size" | "rotate">[] = [
+const TEXT_SKILLS: Pick<SkillItem, "id" | "name" | "textIcon" | "categories">[] = [
+    { id: 101, name: "REST APIs", textIcon: "REST", categories: ["backend", "webdev"] },
+    { id: 102, name: "CRON Jobs", textIcon: "CRON", categories: ["backend"] },
+    { id: 103, name: "Yup", textIcon: "Yup", categories: ["backend"] },
+    { id: 104, name: "Context API", textIcon: "CTX", categories: ["statemanagement"] },
+    { id: 105, name: "Knex", textIcon: "Knex", categories: ["database"] },
+];
+
+const ICON_SKILLS: Pick<SkillItem, "id" | "name" | "Icon" | "categories">[] = [
     { id: 1, name: "C", Icon: SiC, categories: ["language"] },
     { id: 2, name: "C++", Icon: SiCplusplus, categories: ["language"] },
     { id: 3, name: "JavaScript", Icon: SiJavascript, categories: ["language", "webdev", "frontend"] },
@@ -42,65 +52,83 @@ const rawSkills: Omit<SkillItem, "x" | "y" | "size" | "rotate">[] = [
     { id: 14, name: "Sass", Icon: SiSass, categories: ["frontend"] },
     { id: 15, name: "GraphQL", Icon: SiGraphql, categories: ["backend"] },
     { id: 16, name: "Redux", Icon: SiRedux, categories: ["statemanagement"] },
-    { id: 17, name: "MySQL", Icon: SiMysql, categories: ["database"] },
-    { id: 18, name: "PostgreSQL", Icon: SiPostgresql, categories: ["database"] },
-    { id: 19, name: "Prisma", Icon: SiPrisma, categories: ["database"] },
-    { id: 20, name: "VS Code", Icon: SiVscodium, categories: ["tools"] },
-    { id: 21, name: "Postman", Icon: SiPostman, categories: ["tools"] },
-    { id: 22, name: "Git", Icon: SiGit, categories: ["tools"] },
-    { id: 23, name: "GitHub", Icon: SiGithub, categories: ["tools"] },
-    { id: 24, name: "Bitbucket", Icon: SiBitbucket, categories: ["tools"] },
-    { id: 25, name: "Jira", Icon: SiJira, categories: ["tools"] },
-    { id: 26, name: "Android Studio", Icon: SiAndroidstudio, categories: ["tools"] },
-    { id: 27, name: "Figma", Icon: SiFigma, categories: ["tools"] },
-    { id: 28, name: "Canva", Icon: SiCanva, categories: ["tools"] },
-    { id: 29, name: "Vercel", Icon: SiVercel, categories: ["tools"] },
-    { id: 30, name: "Redis", Icon: SiRedis, categories: ["backend"] },
-    { id: 31, name: "Swagger", Icon: SiSwagger, categories: ["backend"] },
-    { id: 32, name: "Jest", Icon: SiJest, categories: ["backend"] },
-    { id: 33, name: "Docker", Icon: SiDocker, categories: ["tools"] },
-    { id: 34, name: "React Hook Form", Icon: SiReact, categories: ["frontend"] },
-    { id: 35, name: "Context API", Icon: SiReact, categories: ["statemanagement"] },
-    { id: 36, name: "Redux Toolkit", Icon: SiRedux, categories: ["statemanagement"] },
-    { id: 37, name: "Knex", Icon: SiNodedotjs, categories: ["database"] },
+    { id: 17, name: "Redux Toolkit", Icon: SiRedux, categories: ["statemanagement"] },
+    { id: 18, name: "MySQL", Icon: SiMysql, categories: ["database"] },
+    { id: 19, name: "PostgreSQL", Icon: SiPostgresql, categories: ["database"] },
+    { id: 20, name: "Prisma", Icon: SiPrisma, categories: ["database"] },
+    { id: 21, name: "VS Code", Icon: VscVscode, categories: ["tools"] },
+    { id: 22, name: "Postman", Icon: SiPostman, categories: ["tools"] },
+    { id: 23, name: "Git", Icon: SiGit, categories: ["tools"] },
+    { id: 24, name: "GitHub", Icon: SiGithub, categories: ["tools"] },
+    { id: 25, name: "Bitbucket", Icon: SiBitbucket, categories: ["tools"] },
+    { id: 26, name: "Jira", Icon: SiJira, categories: ["tools"] },
+    { id: 27, name: "Android Studio", Icon: SiAndroidstudio, categories: ["tools"] },
+    { id: 28, name: "Figma", Icon: SiFigma, categories: ["tools"] },
+    { id: 29, name: "Canva", Icon: SiCanva, categories: ["tools"] },
+    { id: 30, name: "Vercel", Icon: SiVercel, categories: ["tools"] },
+    { id: 31, name: "Redis", Icon: SiRedis, categories: ["backend"] },
+    { id: 32, name: "Swagger", Icon: SiSwagger, categories: ["backend"] },
+    { id: 33, name: "Jest", Icon: SiJest, categories: ["backend"] },
+    // { id: 34, name: "Docker", Icon: SiDocker, categories: ["tools"] },
+    { id: 35, name: "Zod", Icon: SiZod, categories: ["backend"] },
+    { id: 36, name: "JWT", Icon: SiJsonwebtokens, categories: ["backend"] },
+    { id: 37, name: "React Hook Form", Icon: SiReact, categories: ["frontend"] },
     { id: 38, name: "pgAdmin", Icon: SiPostgresql, categories: ["tools"] },
 ];
 
-// Deterministic pseudo-random layout — no Math.random() on render
-function seededLayout(skills: typeof rawSkills): SkillItem[] {
-    // Simple LCG seeded random for deterministic placement
-    let seed = 42;
+// ─── Overlap-free grid layout ────────────────────────────────────────────────
+function buildLayout(): SkillItem[] {
+    let seed = 137;
     const rand = () => {
         seed = (seed * 1664525 + 1013904223) & 0xffffffff;
         return (seed >>> 0) / 0xffffffff;
     };
 
-    // Define zones to spread icons across the full canvas
-    // Avoid center area (where heading/categories sit)
-    const zones = [
-        { xMin: 2, xMax: 18, yMin: 5, yMax: 85 },    // far left column
-        { xMin: 18, xMax: 35, yMin: 3, yMax: 40 },   // upper-mid-left
-        { xMin: 18, xMax: 35, yMin: 58, yMax: 95 },  // lower-mid-left
-        { xMin: 65, xMax: 82, yMin: 3, yMax: 40 },   // upper-mid-right
-        { xMin: 65, xMax: 82, yMin: 58, yMax: 95 },  // lower-mid-right
-        { xMin: 82, xMax: 98, yMin: 5, yMax: 85 },   // far right column
-        { xMin: 35, xMax: 50, yMin: 3, yMax: 20 },   // top-center-left
-        { xMin: 50, xMax: 65, yMin: 3, yMax: 20 },   // top-center-right
-        { xMin: 35, xMax: 50, yMin: 78, yMax: 95 },  // bottom-center-left
-        { xMin: 50, xMax: 65, yMin: 78, yMax: 95 },  // bottom-center-right
+    // 14 cols × 10 rows grid in 100×100 virtual space
+    // Center band (x:28–72, y:24–74) is reserved for heading + categories
+    const COLS = 14;
+    const ROWS = 10;
+    const cells: { x: number; y: number }[] = [];
+
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+            const x = 3 + (col / (COLS - 1)) * 94;
+            const y = 4 + (row / (ROWS - 1)) * 92;
+            if (x > 28 && x < 72 && y > 22 && y < 76) continue;
+            cells.push({ x, y });
+        }
+    }
+
+    // Shuffle cells
+    for (let i = cells.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [cells[i], cells[j]] = [cells[j], cells[i]];
+    }
+
+    const allRaw = [
+        ...ICON_SKILLS.map((s) => ({ ...s, textIcon: undefined })),
+        ...TEXT_SKILLS.map((s) => ({ ...s, Icon: undefined })),
     ];
 
-    return skills.map((skill, i) => {
-        const zone = zones[i % zones.length];
-        const x = zone.xMin + rand() * (zone.xMax - zone.xMin);
-        const y = zone.yMin + rand() * (zone.yMax - zone.yMin);
-        const size = 28 + Math.floor(rand() * 22); // 28–50px
-        const rotate = (rand() - 0.5) * 20; // -10 to +10 deg
-        return { ...skill, x, y, size, rotate };
+    return allRaw.map((skill, i) => {
+        const cell = cells[i % cells.length];
+        // Small jitter so layout looks organic, not grid-perfect
+        const jitterX = (rand() - 0.5) * 3;
+        const jitterY = (rand() - 0.5) * 3;
+        const size = 28 + Math.floor(rand() * 18); // 28–46px
+        const rotate = (rand() - 0.5) * 16;
+
+        return {
+            ...skill,
+            x: Math.max(2, Math.min(97, cell.x + jitterX)),
+            y: Math.max(2, Math.min(97, cell.y + jitterY)),
+            size,
+            rotate,
+        } as SkillItem;
     });
 }
 
-const skills: SkillItem[] = seededLayout(rawSkills);
+const skills: SkillItem[] = buildLayout();
 
 const categories: { key: Category; label: string }[] = [
     { key: "language", label: "Language" },
@@ -114,6 +142,7 @@ const categories: { key: Category; label: string }[] = [
 
 export default function SkillsSection() {
     const [activeCategory, setActiveCategory] = useState<Category>("all");
+    const [lockedCategory, setLockedCategory] = useState<Category>("all");
     const [hoveredSkill, setHoveredSkill] = useState<number | null>(null);
     const [tooltip, setTooltip] = useState<{ id: number; x: number; y: number } | null>(null);
     const sectionRef = useRef<HTMLDivElement>(null);
@@ -126,8 +155,7 @@ export default function SkillsSection() {
             const rect = section.getBoundingClientRect();
             const wh = window.innerHeight;
             if (rect.top <= 0 && rect.bottom > wh) {
-                const p = Math.max(0, Math.min(1, -rect.top / (rect.height - wh)));
-                setScrollProgress(p);
+                setScrollProgress(Math.max(0, Math.min(1, -rect.top / (rect.height - wh))));
             } else if (rect.top > 0) setScrollProgress(0);
             else setScrollProgress(1);
         };
@@ -136,11 +164,19 @@ export default function SkillsSection() {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
+    const effectiveCategory = lockedCategory !== "all" ? lockedCategory : activeCategory;
+
     const isSkillLit = useCallback((skill: SkillItem) => {
         if (hoveredSkill === skill.id) return true;
-        if (activeCategory === "all") return false;
-        return skill.categories.includes(activeCategory);
-    }, [activeCategory, hoveredSkill]);
+        if (effectiveCategory === "all") return false;
+        return skill.categories.includes(effectiveCategory);
+    }, [effectiveCategory, hoveredSkill]);
+
+    const showName = useCallback((skill: SkillItem) => {
+        if (hoveredSkill === skill.id) return true;
+        if (effectiveCategory !== "all" && skill.categories.includes(effectiveCategory)) return true;
+        return false;
+    }, [effectiveCategory, hoveredSkill]);
 
     const handleMouseEnter = (skill: SkillItem, e: React.MouseEvent) => {
         setHoveredSkill(skill.id);
@@ -160,6 +196,24 @@ export default function SkillsSection() {
         setTooltip(null);
     };
 
+    const handleCategoryClick = (key: Category) => {
+        if (lockedCategory === key) {
+            setLockedCategory("all");
+            setActiveCategory("all");
+        } else {
+            setLockedCategory(key);
+            setActiveCategory(key);
+        }
+    };
+
+    const handleCategoryEnter = (key: Category) => {
+        if (lockedCategory === "all") setActiveCategory(key);
+    };
+
+    const handleCategoryLeave = () => {
+        if (lockedCategory === "all") setActiveCategory("all");
+    };
+
     return (
         <section
             ref={sectionRef}
@@ -170,41 +224,39 @@ export default function SkillsSection() {
 
                 {/* Heading */}
                 <h2
-                    className="text-center text-5xl md:text-7xl font-bold tracking-[0.3em] uppercase mb-6 z-10 relative"
+                    className="text-center text-5xl md:text-7xl font-bold tracking-[0.3em] uppercase mb-5 z-10 relative"
                     style={{
                         color: scrollProgress > 0.02 ? "#FFD700" : "#888",
                         textShadow: scrollProgress > 0.02
                             ? "0 0 60px rgba(255,215,0,0.6), 0 0 100px rgba(255,215,0,0.3)"
                             : "none",
                         transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-                        fontFamily: "system-ui, -apple-system, sans-serif"
+                        fontFamily: "system-ui, -apple-system, sans-serif",
                     }}
                 >
                     SKILLS
                 </h2>
 
                 {/* Category pills */}
-                <div className="flex flex-wrap justify-center gap-2 mb-4 px-4 z-10 relative">
+                <div className="flex flex-wrap justify-center gap-2 px-4 z-10 relative">
                     {categories.map((cat) => {
-                        const isActive = activeCategory === cat.key;
+                        const isLocked = lockedCategory === cat.key;
+                        const isHighlighted = effectiveCategory === cat.key;
+
                         return (
                             <button
                                 key={cat.key}
-                                onClick={() => setActiveCategory(isActive ? "all" : cat.key)}
-                                onMouseEnter={() => !isActive && setActiveCategory(cat.key)}
-                                onMouseLeave={() => !isActive && setActiveCategory("all")}
+                                onClick={() => handleCategoryClick(cat.key)}
+                                onMouseEnter={() => handleCategoryEnter(cat.key)}
+                                onMouseLeave={handleCategoryLeave}
                                 className="px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase transition-all duration-300 border cursor-pointer"
                                 style={{
-                                    background: isActive
-                                        ? "rgba(255,215,0,0.18)"
-                                        : "rgba(255,255,255,0.03)",
-                                    borderColor: isActive
-                                        ? "rgba(255,215,0,0.7)"
-                                        : "rgba(255,255,255,0.1)",
-                                    color: isActive ? "#FFD700" : "#666",
-                                    boxShadow: isActive
-                                        ? "0 0 20px rgba(255,215,0,0.3)"
-                                        : "none",
+                                    background: isHighlighted ? "rgba(255,215,0,0.18)" : "rgba(255,255,255,0.03)",
+                                    borderColor: isHighlighted ? "rgba(255,215,0,0.7)" : "rgba(255,255,255,0.1)",
+                                    color: isHighlighted ? "#FFD700" : "#555",
+                                    boxShadow: isHighlighted ? "0 0 20px rgba(255,215,0,0.3)" : "none",
+                                    outline: isLocked ? "2px solid rgba(255,215,0,0.4)" : "none",
+                                    outlineOffset: "2px",
                                 }}
                             >
                                 {cat.label}
@@ -213,52 +265,108 @@ export default function SkillsSection() {
                     })}
                 </div>
 
-                {/* Icon collage canvas */}
-                <div
-                    className="absolute inset-0 w-full h-full pointer-events-none"
-                    style={{ zIndex: 1 }}
+                {/* Hint */}
+                <p
+                    className="z-10 relative mt-2 text-center"
+                    style={{
+                        fontSize: "9px",
+                        color: "#3a3a3a",
+                        letterSpacing: "0.12em",
+                        fontFamily: "system-ui, -apple-system, sans-serif",
+                    }}
                 >
+                    HOVER TO PREVIEW · CLICK TO LOCK
+                </p>
+
+                {/* Icon collage */}
+                <div className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
                     {skills.map((skill) => {
                         const lit = isSkillLit(skill);
+                        const named = showName(skill);
                         const Icon = skill.Icon;
 
                         return (
                             <div
                                 key={skill.id}
-                                className="absolute pointer-events-auto cursor-pointer"
+                                className="absolute pointer-events-auto cursor-pointer flex flex-col items-center"
                                 style={{
                                     left: `${skill.x}%`,
                                     top: `${skill.y}%`,
                                     transform: `translate(-50%, -50%) rotate(${skill.rotate}deg)`,
-                                    transition: "filter 0.3s ease, opacity 0.3s ease, transform 0.2s ease",
+                                    transition: "filter 0.3s ease, opacity 0.3s ease",
                                     opacity: lit ? 1 : 0.28,
                                     filter: lit
-                                        ? `drop-shadow(0 0 8px rgba(255,215,0,0.9)) drop-shadow(0 0 20px rgba(255,215,0,0.5))`
-                                        : "grayscale(1) brightness(0.5)",
+                                        ? "drop-shadow(0 0 8px rgba(255,215,0,0.9)) drop-shadow(0 0 20px rgba(255,215,0,0.5))"
+                                        : "grayscale(1) brightness(0.45)",
                                     zIndex: lit ? 20 : 5,
                                     willChange: "filter, opacity",
+                                    gap: "3px",
                                 }}
                                 onMouseEnter={(e) => handleMouseEnter(skill, e)}
                                 onMouseLeave={handleMouseLeave}
                             >
-                                <Icon
-                                    size={skill.size}
-                                    color={lit ? "#FFD700" : "#888"}
-                                    style={{ transition: "color 0.3s ease", display: "block" }}
-                                />
+                                {Icon ? (
+                                    <Icon
+                                        size={skill.size}
+                                        color={lit ? "#FFD700" : "#888"}
+                                        style={{ transition: "color 0.3s ease", display: "block" }}
+                                    />
+                                ) : (
+                                    <div
+                                        style={{
+                                            width: `${skill.size + 10}px`,
+                                            height: `${skill.size}px`,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            border: `2px solid ${lit ? "rgba(255,215,0,0.8)" : "rgba(136,136,136,0.4)"}`,
+                                            borderRadius: "5px",
+                                            fontSize: `${Math.max(9, skill.size * 0.36)}px`,
+                                            fontWeight: 800,
+                                            fontFamily: "system-ui, -apple-system, sans-serif",
+                                            color: lit ? "#FFD700" : "#777",
+                                            letterSpacing: "0.03em",
+                                            transition: "all 0.3s ease",
+                                            background: lit ? "rgba(255,215,0,0.06)" : "transparent",
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {skill.textIcon}
+                                    </div>
+                                )}
+
+                                {/* Name label */}
+                                <span
+                                    style={{
+                                        fontSize: "8px",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.07em",
+                                        textTransform: "uppercase",
+                                        color: "#FFD700",
+                                        whiteSpace: "nowrap",
+                                        opacity: named ? 1 : 0,
+                                        transition: "opacity 0.25s ease",
+                                        pointerEvents: "none",
+                                        fontFamily: "system-ui, -apple-system, sans-serif",
+                                        textShadow: "0 0 8px rgba(255,215,0,0.7)",
+                                        lineHeight: 1,
+                                    }}
+                                >
+                                    {skill.name}
+                                </span>
                             </div>
                         );
                     })}
 
-                    {/* Tooltip */}
-                    {tooltip && hoveredSkill !== null && (
+                    {/* Tooltip — only in "all" mode (no category active) */}
+                    {tooltip && hoveredSkill !== null && effectiveCategory === "all" && (
                         <div
                             className="absolute pointer-events-none z-30 px-3 py-1 rounded-md text-xs font-bold tracking-wider uppercase whitespace-nowrap"
                             style={{
                                 left: `${tooltip.x}px`,
                                 top: `${tooltip.y}px`,
                                 transform: "translateX(-50%)",
-                                background: "rgba(0,0,0,0.85)",
+                                background: "rgba(0,0,0,0.9)",
                                 border: "1px solid rgba(255,215,0,0.5)",
                                 color: "#FFD700",
                                 boxShadow: "0 0 16px rgba(255,215,0,0.3)",
@@ -270,13 +378,12 @@ export default function SkillsSection() {
                     )}
                 </div>
 
-                {/* Subtle ambient glow when category active */}
-                {activeCategory !== "all" && (
+                {/* Ambient glow when category active */}
+                {effectiveCategory !== "all" && (
                     <div
                         className="absolute inset-0 pointer-events-none z-0"
                         style={{
-                            background:
-                                "radial-gradient(ellipse at center, rgba(255,215,0,0.03) 0%, transparent 70%)",
+                            background: "radial-gradient(ellipse at center, rgba(255,215,0,0.03) 0%, transparent 70%)",
                         }}
                     />
                 )}
