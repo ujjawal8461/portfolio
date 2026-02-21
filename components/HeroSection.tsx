@@ -14,6 +14,14 @@ export default function HeroSection() {
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
+    useEffect(() => {
+        document.body.style.overflow = "hidden";
+    }, []);
+
+    useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
         };
@@ -267,6 +275,9 @@ export default function HeroSection() {
                 setIsLightOn(isLightOn);
                 if (showSwitchHint) {
                     setShowSwitchHint(false);
+                }
+                if (isLightOn) {
+                    document.body.style.overflow = "";
                 }
             }
             isDragging = false;
@@ -647,7 +658,7 @@ export default function HeroSection() {
                     }}
                 >
                     <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium tracking-wide pulse-glow text-center" style={{ fontFamily: 'var(--font-space-grotesk)', willChange: 'text-shadow, opacity' }}>
-                        {"Turn on the bulb to know about me."}
+                        {"Drag the button to make the bulb glow"}
                     </p>
                 </div>
             )}

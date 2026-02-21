@@ -2,46 +2,66 @@
 
 import { useEffect, useRef, useState } from "react";
 
+interface Project {
+    id: number;
+    name: string;
+    description: string;
+    techStack: string[];
+    liveUrl: string | null;
+    githubUrl: string;
+    unlockAt: number;
+}
+
 export default function ProjectsSection() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const [scrollProgress, setScrollProgress] = useState(0);
+    const [hoveredId, setHoveredId] = useState<number | null>(null);
 
-    const projects = [
+    const projects: Project[] = [
         {
             id: 1,
-            name: "E-Commerce Platform",
-            description: "Full-stack online marketplace with real-time inventory, payment integration, and admin dashboard",
-            techStack: ["React", "Node.js", "MongoDB", "Stripe", "Redux"],
-            liveUrl: "https://example.com",
-            githubUrl: "https://github.com/username/project1",
-            unlockAt: 0.15
+            name: "SaaS Project Management",
+            description: "A backend-driven project management system built for teams. Handles auth, workspaces, tasks, and role-based permissions.",
+            techStack: ["Node.js", "Express", "MongoDB", "JWT", "REST API"],
+            liveUrl: null,
+            githubUrl: "https://github.com/ujjawal8461/project-management-backend",
+            unlockAt: 0.1
         },
         {
             id: 2,
-            name: "AI Content Generator",
-            description: "Machine learning powered content creation tool with natural language processing",
-            techStack: ["Next.js", "TypeScript", "OpenAI", "PostgreSQL", "Tailwind"],
-            liveUrl: "https://example.com",
-            githubUrl: "https://github.com/username/project2",
-            unlockAt: 0.35
+            name: "Netflix Clone",
+            description: "A faithful recreation of Netflix UI with movie browsing, categories, and responsive layout.",
+            techStack: ["React", "CSS", "TMDB API", "Vercel"],
+            liveUrl: "https://netflix-clone-b098km9aa-ujjawal-singh-solankis-projects.vercel.app/",
+            githubUrl: "https://github.com/ujjawal8461/netflix-clone",
+            unlockAt: 0.3
         },
         {
             id: 3,
-            name: "Real-Time Analytics Dashboard",
-            description: "Interactive data visualization platform with live updates and custom reporting",
-            techStack: ["React", "D3.js", "Express", "WebSocket", "MySQL"],
-            liveUrl: "https://example.com",
-            githubUrl: "https://github.com/username/project3",
-            unlockAt: 0.55
+            name: "Rock Paper Scissors",
+            description: "Classic game with clean UI, score tracking, and smooth interactions.",
+            techStack: ["HTML", "CSS", "JavaScript"],
+            liveUrl: "https://rock-paper-scissor-livid-tau.vercel.app/",
+            githubUrl: "https://github.com/ujjawal8461/Rock-Paper-Scissor.git",
+            unlockAt: 0.5
         },
         {
             id: 4,
-            name: "Social Media Aggregator",
-            description: "Unified platform to manage multiple social media accounts with scheduling features",
-            techStack: ["Next.js", "GraphQL", "Redis", "OAuth", "Material UI"],
-            liveUrl: "https://example.com",
-            githubUrl: "https://github.com/username/project4",
-            unlockAt: 0.75
+            name: "Portfolio",
+            description: "This very site. Built with Next.js, canvas physics, and scroll-driven animations.",
+            techStack: ["Next.js", "TypeScript", "Canvas API", "Tailwind"],
+            liveUrl: null,
+            githubUrl: "https://github.com/ujjawal8461/portfolio.git",
+            unlockAt: 0.65
+        },
+        {
+            id: 5,
+            name: "Aesthetic Landing Page",
+            description: "A visual-first landing page with bold typography and strong design sensibility.",
+            techStack: ["HTML", "CSS", "JavaScript"],
+            liveUrl: "https://landing-page-fgbqqol7g-ujjawal-singh-solankis-projects.vercel.app/",
+            githubUrl: "https://github.com/ujjawal8461/aesthetic-page.git",
+            unlockAt: 0.8
         }
     ];
 
@@ -52,41 +72,29 @@ export default function ProjectsSection() {
         const handleScroll = () => {
             const rect = section.getBoundingClientRect();
             const windowHeight = window.innerHeight;
-
-            if (rect.top <= 0 && rect.bottom > windowHeight) {
-                const scrolledPastTop = -rect.top;
-                const sectionScrollHeight = rect.height - windowHeight;
-                const progress = Math.max(0, Math.min(1, scrolledPastTop / sectionScrollHeight));
-                setScrollProgress(progress);
-            } else if (rect.top > 0) {
-                setScrollProgress(0);
-            } else if (rect.bottom <= windowHeight) {
-                setScrollProgress(1);
-            }
+            const sectionScrollHeight = rect.height - windowHeight;
+            const scrolledPastTop = -rect.top;
+            const progress = Math.max(0, Math.min(1, scrolledPastTop / sectionScrollHeight));
+            setScrollProgress(progress);
         };
 
         handleScroll();
-        window.addEventListener("scroll", handleScroll);
-
+        window.addEventListener("scroll", handleScroll, { passive: true });
         return () => {
             window.removeEventListener("scroll", handleScroll);
         };
     }, []);
 
-    const isProjectUnlocked = (unlockThreshold: number) => {
-        return scrollProgress >= unlockThreshold;
-    };
-
     return (
         <section
             ref={sectionRef}
             className="relative w-full bg-black"
-            style={{ minHeight: "250vh" }}
+            style={{ height: "300vh" }}
         >
-            <div className="sticky top-0 h-screen overflow-hidden flex flex-col items-center justify-center py-12 px-4">
-                {/* Title */}
+            <div className="sticky top-0 h-screen flex flex-col items-center justify-center py-8 px-6">
+
                 <h2
-                    className="text-center text-5xl md:text-6xl font-bold mb-8 tracking-[0.25em] uppercase"
+                    className="text-center text-5xl md:text-6xl font-bold mb-12 tracking-[0.25em] uppercase"
                     style={{
                         color: scrollProgress > 0.05 ? "#FFD700" : "#888",
                         textShadow: scrollProgress > 0.05 ? "0 0 50px rgba(255,215,0,0.5)" : "none",
@@ -94,268 +102,284 @@ export default function ProjectsSection() {
                         fontFamily: "system-ui, -apple-system, sans-serif"
                     }}
                 >
-                    PROJECTS UNLEASHED
+                    PROJECTS
                 </h2>
 
-                {/* Energy Bar Container */}
-                <div className="w-full max-w-4xl mb-12">
-                    <div className="relative h-12 rounded-full overflow-hidden"
+                <div
+                    style={{
+                        width: "100%",
+                        maxWidth: "720px",
+                        marginBottom: "2.5rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "1rem"
+                    }}
+                >
+                    <span
                         style={{
-                            background: "linear-gradient(90deg, rgba(50,50,50,0.3), rgba(30,30,30,0.5))",
-                            border: "2px solid rgba(100,100,100,0.3)",
-                            boxShadow: "inset 0 2px 10px rgba(0,0,0,0.5)"
+                            color: "#3a3a3a",
+                            fontSize: "10px",
+                            letterSpacing: "0.2em",
+                            fontFamily: "var(--font-space-grotesk)",
+                            whiteSpace: "nowrap"
                         }}
                     >
-                        {/* Energy Fill */}
+                        CHARGE
+                    </span>
+                    <div
+                        style={{
+                            flex: 1,
+                            position: "relative",
+                            height: "2px",
+                            background: "rgba(255,255,255,0.06)",
+                            borderRadius: "999px"
+                        }}
+                    >
                         <div
-                            className="absolute inset-0 transition-all duration-300 ease-out"
                             style={{
-                                width: `${scrollProgress * 100}%`,
-                                background: "linear-gradient(90deg, rgba(255,215,0,0.8), rgba(255,180,0,0.9), rgba(255,215,0,0.8))",
-                                boxShadow: `
-                                    0 0 30px rgba(255,215,0,0.6),
-                                    inset 0 0 20px rgba(255,255,150,0.4)
-                                `,
-                                filter: "blur(1px)"
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                bottom: 0,
+                                width: Math.round(scrollProgress * 100) + "%",
+                                background: "linear-gradient(90deg, #FFD700, #FFF7A0)",
+                                boxShadow: "0 0 10px rgba(255,215,0,0.6)",
+                                borderRadius: "999px",
+                                transition: "width 0.15s ease"
                             }}
-                        >
-                            {/* Energy Pulse Animation */}
+                        />
+                        {scrollProgress > 0 && scrollProgress < 1 && (
                             <div
-                                className="absolute inset-0 opacity-60"
                                 style={{
-                                    background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%)",
-                                    animation: "energyPulse 2s linear infinite"
-                                }}
-                            />
-                        </div>
-
-                        {/* Glow Effect */}
-                        {scrollProgress > 0 && (
-                            <div
-                                className="absolute right-0 top-1/2 -translate-y-1/2 w-32 h-32 pointer-events-none"
-                                style={{
-                                    background: "radial-gradient(circle, rgba(255,215,0,0.4), transparent 70%)",
-                                    filter: "blur(20px)",
-                                    animation: "glowPulse 2s ease-in-out infinite"
+                                    position: "absolute",
+                                    left: Math.round(scrollProgress * 100) + "%",
+                                    top: "50%",
+                                    width: "8px",
+                                    height: "8px",
+                                    borderRadius: "50%",
+                                    background: "#FFF",
+                                    boxShadow: "0 0 10px rgba(255,215,0,1)",
+                                    transform: "translate(-50%, -50%)"
                                 }}
                             />
                         )}
-
-                        {/* Energy Text */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <span
-                                className="text-sm font-bold tracking-widest"
-                                style={{
-                                    color: scrollProgress > 0.1 ? "#FFF" : "#666",
-                                    textShadow: scrollProgress > 0.1 ? "0 0 10px rgba(255,255,255,0.8)" : "none",
-                                    transition: "all 0.3s ease"
-                                }}
-                            >
-                                ⚡ ENERGY: {Math.round(scrollProgress * 100)}%
-                            </span>
-                        </div>
                     </div>
+                    <span
+                        style={{
+                            color: "#444",
+                            fontSize: "10px",
+                            letterSpacing: "0.15em",
+                            fontFamily: "var(--font-geist-mono)",
+                            whiteSpace: "nowrap"
+                        }}
+                    >
+                        {Math.round(scrollProgress * 100)}%
+                    </span>
                 </div>
 
-                {/* Projects Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl w-full">
-                    {projects.map((project, index) => {
-                        const isUnlocked = isProjectUnlocked(project.unlockAt);
-                        const intensity = isUnlocked ? 1 : 0;
+                <div style={{ width: "100%", maxWidth: "720px", display: "flex", flexDirection: "column" }}>
+                    {projects.map((project, idx) => {
+                        const isUnlocked = scrollProgress >= project.unlockAt;
+                        const isHovered = hoveredId === project.id;
+
+                        let borderColor = "#1e1e1e";
+                        if (isUnlocked && isHovered) {
+                            borderColor = "#FFD700";
+                        } else if (isUnlocked) {
+                            borderColor = "rgba(255,215,0,0.22)";
+                        }
+
+                        const dotBg = isUnlocked ? "#FFD700" : "#2a2a2a";
+                        const dotShadow = isUnlocked ? "0 0 8px rgba(255,215,0,0.9)" : "none";
+                        const titleColor = isUnlocked ? (isHovered ? "#FFD700" : "rgba(255,215,0,0.88)") : "#444";
+                        const titleShadow = isUnlocked && isHovered ? "0 0 18px rgba(255,215,0,0.4)" : "none";
+                        const descColor = isUnlocked ? "rgba(150,150,150,0.9)" : "#333";
+                        const tagBg = isUnlocked ? "rgba(255,215,0,0.07)" : "rgba(255,255,255,0.02)";
+                        const tagColor = isUnlocked ? "rgba(255,215,0,0.6)" : "#2e2e2e";
+                        const tagBorder = isUnlocked ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.04)";
+                        const githubColor = isUnlocked ? "rgba(255,215,0,0.7)" : "#333";
+                        const githubBorder = isUnlocked ? "rgba(255,215,0,0.22)" : "rgba(255,255,255,0.05)";
+                        const liveColor = isUnlocked ? "#FFD700" : "#333";
+                        const liveBg = isUnlocked ? "rgba(255,215,0,0.09)" : "transparent";
+                        const liveBorder = isUnlocked ? "rgba(255,215,0,0.32)" : "rgba(255,255,255,0.05)";
+                        const liveOpacity = project.liveUrl !== null ? 1 : 0.38;
+                        const rowOpacity = isUnlocked ? 1 : 0.18;
+                        const rowTransform = isUnlocked && isHovered ? "translateX(4px)" : "translateX(0)";
+                        const ptrEvents: "auto" | "none" = isUnlocked ? "auto" : "none";
 
                         return (
                             <div
                                 key={project.id}
-                                className="relative"
+                                onMouseEnter={() => setHoveredId(project.id)}
+                                onMouseLeave={() => setHoveredId(null)}
                                 style={{
-                                    opacity: isUnlocked ? 1 : 0.3,
-                                    transform: isUnlocked ? "scale(1)" : "scale(0.95)",
-                                    transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
-                                    transitionDelay: `${index * 0.1}s`
+                                    opacity: rowOpacity,
+                                    transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1) " + idx * 0.04 + "s",
+                                    borderBottom: "1px solid rgba(255,255,255,0.045)",
+                                    borderLeft: "2px solid " + borderColor,
+                                    padding: "16px 0 16px 22px",
+                                    transform: rowTransform
                                 }}
                             >
-                                {/* Outer Glow */}
-                                {isUnlocked && (
-                                    <div
-                                        className="absolute inset-0 rounded-lg"
-                                        style={{
-                                            background: `radial-gradient(circle at center, rgba(255, 215, 0, ${intensity * 0.2}), transparent 70%)`,
-                                            filter: "blur(25px)",
-                                            transform: "scale(1.05)",
-                                            animation: "projectGlow 3s ease-in-out infinite"
-                                        }}
-                                    />
-                                )}
-
-                                {/* Card */}
                                 <div
-                                    className="relative p-6 rounded-lg overflow-hidden"
                                     style={{
-                                        backgroundColor: isUnlocked ? "rgba(255, 215, 0, 0.05)" : "rgba(20, 20, 20, 0.5)",
-                                        border: `2px solid ${isUnlocked ? `rgba(255, 215, 0, ${intensity * 0.6})` : "rgba(50, 50, 50, 0.3)"}`,
-                                        boxShadow: isUnlocked
-                                            ? `0 0 40px rgba(255, 215, 0, ${intensity * 0.4}), inset 0 0 30px rgba(255, 215, 0, ${intensity * 0.1})`
-                                            : "none",
-                                        minHeight: "280px"
+                                        display: "flex",
+                                        alignItems: "flex-start",
+                                        justifyContent: "space-between",
+                                        gap: "1.5rem",
+                                        flexWrap: "wrap"
                                     }}
                                 >
-                                    {/* Shimmer Effect */}
-                                    {isUnlocked && (
-                                        <div
-                                            className="absolute inset-0"
-                                            style={{
-                                                background: "linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.15), transparent)",
-                                                animation: "shimmer 3s ease-in-out infinite"
-                                            }}
-                                        />
-                                    )}
-
-                                    {/* Lock Icon for Locked Projects */}
-                                    {!isUnlocked && (
-                                        <div className="absolute top-4 right-4">
-                                            <span className="text-2xl opacity-50">🔒</span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
+                                            <div
+                                                style={{
+                                                    width: "7px",
+                                                    height: "7px",
+                                                    borderRadius: "50%",
+                                                    flexShrink: 0,
+                                                    background: dotBg,
+                                                    boxShadow: dotShadow,
+                                                    transition: "all 0.4s ease",
+                                                    marginLeft: "-26px",
+                                                    marginRight: "16px"
+                                                }}
+                                            />
+                                            <h3
+                                                style={{
+                                                    fontSize: "clamp(0.88rem, 1.35vw, 1.05rem)",
+                                                    fontWeight: 700,
+                                                    letterSpacing: "0.07em",
+                                                    color: titleColor,
+                                                    textShadow: titleShadow,
+                                                    transition: "all 0.3s ease",
+                                                    fontFamily: "system-ui, -apple-system, sans-serif",
+                                                    margin: 0
+                                                }}
+                                            >
+                                                {project.name}
+                                            </h3>
                                         </div>
-                                    )}
 
-                                    <div className="relative z-10">
-                                        {/* Project Name */}
-                                        <h3
-                                            className="text-2xl font-bold mb-3 tracking-wide"
-                                            style={{
-                                                color: isUnlocked ? "#FFD700" : "#666",
-                                                textShadow: isUnlocked ? `0 0 20px rgba(255, 215, 0, ${intensity * 0.7})` : "none",
-                                                transition: "all 0.4s ease"
-                                            }}
-                                        >
-                                            {isUnlocked ? "✨ " : ""}{project.name}
-                                        </h3>
-
-                                        {/* Description */}
                                         <p
-                                            className="text-sm mb-4 leading-relaxed"
                                             style={{
-                                                color: isUnlocked ? "rgba(200, 200, 200, 0.9)" : "#555",
-                                                transition: "all 0.4s ease"
+                                                fontSize: "0.77rem",
+                                                color: descColor,
+                                                lineHeight: 1.65,
+                                                margin: "0 0 10px 0",
+                                                transition: "all 0.3s ease",
+                                                fontFamily: "system-ui, -apple-system, sans-serif",
+                                                maxWidth: "480px"
                                             }}
                                         >
                                             {project.description}
                                         </p>
 
-                                        {/* Tech Stack */}
-                                        <div className="flex flex-wrap gap-2 mb-4">
-                                            {project.techStack.map((tech, techIndex) => (
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                                            {project.techStack.map((tech, i) => (
                                                 <span
-                                                    key={techIndex}
-                                                    className="text-xs px-2.5 py-1 rounded"
+                                                    key={i}
                                                     style={{
-                                                        backgroundColor: isUnlocked ? "rgba(255, 215, 0, 0.15)" : "rgba(80, 80, 80, 0.2)",
-                                                        color: isUnlocked ? "rgba(255, 240, 180, 0.95)" : "#666",
-                                                        border: `1px solid ${isUnlocked ? "rgba(255, 215, 0, 0.3)" : "rgba(80, 80, 80, 0.3)"}`,
-                                                        transition: "all 0.4s ease",
-                                                        transitionDelay: `${techIndex * 0.05}s`
+                                                        fontSize: "0.6rem",
+                                                        letterSpacing: "0.14em",
+                                                        textTransform: "uppercase",
+                                                        padding: "2px 7px",
+                                                        borderRadius: "2px",
+                                                        background: tagBg,
+                                                        color: tagColor,
+                                                        border: "1px solid " + tagBorder,
+                                                        fontFamily: "var(--font-geist-mono)"
                                                     }}
                                                 >
                                                     {tech}
                                                 </span>
                                             ))}
                                         </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="flex gap-3">
-                                            <a
-                                                href={project.liveUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="px-4 py-2 rounded text-sm font-semibold transition-all duration-300"
-                                                style={{
-                                                    backgroundColor: isUnlocked ? "rgba(255, 215, 0, 0.2)" : "rgba(60, 60, 60, 0.3)",
-                                                    color: isUnlocked ? "#FFD700" : "#555",
-                                                    border: `1px solid ${isUnlocked ? "rgba(255, 215, 0, 0.5)" : "rgba(80, 80, 80, 0.4)"}`,
-                                                    cursor: isUnlocked ? "pointer" : "not-allowed",
-                                                    pointerEvents: isUnlocked ? "auto" : "none",
-                                                    boxShadow: isUnlocked ? "0 0 15px rgba(255, 215, 0, 0.3)" : "none"
-                                                }}
-                                            >
-                                                Live Demo →
-                                            </a>
-                                            <a
-                                                href={project.githubUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="px-4 py-2 rounded text-sm font-semibold transition-all duration-300"
-                                                style={{
-                                                    backgroundColor: isUnlocked ? "rgba(255, 215, 0, 0.1)" : "rgba(50, 50, 50, 0.3)",
-                                                    color: isUnlocked ? "rgba(255, 240, 180, 0.9)" : "#555",
-                                                    border: `1px solid ${isUnlocked ? "rgba(255, 215, 0, 0.4)" : "rgba(80, 80, 80, 0.4)"}`,
-                                                    cursor: isUnlocked ? "pointer" : "not-allowed",
-                                                    pointerEvents: isUnlocked ? "auto" : "none"
-                                                }}
-                                            >
-                                                GitHub
-                                            </a>
-                                        </div>
                                     </div>
 
-                                    {/* Corner Accents */}
-                                    {isUnlocked && (
-                                        <>
-                                            <div
-                                                className="absolute top-0 left-0 w-12 h-12"
-                                                style={{
-                                                    background: `linear-gradient(135deg, rgba(255, 215, 0, ${intensity * 0.4}), transparent)`,
-                                                    borderTopLeftRadius: "8px"
-                                                }}
-                                            />
-                                            <div
-                                                className="absolute bottom-0 right-0 w-12 h-12"
-                                                style={{
-                                                    background: `linear-gradient(-45deg, rgba(255, 215, 0, ${intensity * 0.4}), transparent)`,
-                                                    borderBottomRightRadius: "8px"
-                                                }}
-                                            />
-                                        </>
-                                    )}
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "7px",
+                                            flexShrink: 0,
+                                            paddingTop: "2px"
+                                        }}
+                                    >
+                                        <a
+                                            href={project.githubUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                fontSize: "0.67rem",
+                                                letterSpacing: "0.14em",
+                                                fontWeight: 600,
+                                                padding: "5px 14px",
+                                                borderRadius: "2px",
+                                                background: "transparent",
+                                                color: githubColor,
+                                                border: "1px solid " + githubBorder,
+                                                textDecoration: "none",
+                                                pointerEvents: ptrEvents,
+                                                transition: "all 0.25s ease",
+                                                fontFamily: "system-ui, -apple-system, sans-serif",
+                                                display: "block",
+                                                textAlign: "center",
+                                                whiteSpace: "nowrap"
+                                            }}
+                                        >
+                                            GitHub
+                                        </a>
+                                        <a
+                                            href={project.liveUrl !== null ? project.liveUrl : "#"}
+                                            target={project.liveUrl !== null ? "_blank" : "_self"}
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => {
+                                                if (project.liveUrl === null) {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            style={{
+                                                fontSize: "0.67rem",
+                                                letterSpacing: "0.14em",
+                                                fontWeight: 600,
+                                                padding: "5px 14px",
+                                                borderRadius: "2px",
+                                                background: liveBg,
+                                                color: liveColor,
+                                                border: "1px solid " + liveBorder,
+                                                textDecoration: "none",
+                                                pointerEvents: ptrEvents,
+                                                transition: "all 0.25s ease",
+                                                fontFamily: "system-ui, -apple-system, sans-serif",
+                                                display: "block",
+                                                textAlign: "center",
+                                                whiteSpace: "nowrap",
+                                                opacity: liveOpacity
+                                            }}
+                                        >
+                                            Live
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Scroll Hint */}
-                <div
-                    className="text-center text-xs tracking-[0.35em] uppercase mt-10"
+                <p
                     style={{
-                        color: scrollProgress < 0.95 ? "#555" : "#222",
-                        opacity: scrollProgress < 0.95 ? 0.7 : 0,
-                        transition: "all 0.5s ease"
+                        marginTop: "28px",
+                        fontSize: "0.58rem",
+                        letterSpacing: "0.32em",
+                        color: "#272727",
+                        textTransform: "uppercase",
+                        fontFamily: "system-ui, -apple-system, sans-serif"
                     }}
                 >
-                    Scroll to charge energy • Unlock all projects
-                </div>
+                    scroll to unlock
+                </p>
             </div>
-
-            {/* Animations */}
-            <style jsx>{`
-                @keyframes energyPulse {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(100%); }
-                }
-                
-                @keyframes glowPulse {
-                    0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-                    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-                }
-                
-                @keyframes projectGlow {
-                    0%, 100% { opacity: 0.7; }
-                    50% { opacity: 1; }
-                }
-                
-                @keyframes shimmer {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(100%); }
-                }
-            `}</style>
         </section>
     );
 }
