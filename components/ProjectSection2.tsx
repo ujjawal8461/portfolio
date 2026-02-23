@@ -32,7 +32,7 @@ export default function ProjectsSection() {
             name: "Netflix Clone",
             description: "A faithful recreation of Netflix UI with movie browsing, categories, and responsive layout.",
             techStack: ["React", "CSS", "TMDB API", "Vercel"],
-            liveUrl: "https://netflix-clone-b098km9aa-ujjawal-singh-solankis-projects.vercel.app/",
+            liveUrl: "https://netflix-clone-8461.vercel.app/",
             githubUrl: "https://github.com/ujjawal8461/netflix-clone",
             unlockAt: 0.3
         },
@@ -41,7 +41,7 @@ export default function ProjectsSection() {
             name: "Rock Paper Scissors",
             description: "Classic game with clean UI, score tracking, and smooth interactions.",
             techStack: ["HTML", "CSS", "JavaScript"],
-            liveUrl: "https://rock-paper-scissor-livid-tau.vercel.app/",
+            liveUrl: "https://rock-paper-scissor-8461.vercel.app/",
             githubUrl: "https://github.com/ujjawal8461/Rock-Paper-Scissor.git",
             unlockAt: 0.5
         },
@@ -50,7 +50,7 @@ export default function ProjectsSection() {
             name: "Portfolio",
             description: "This very site. Built with Next.js, canvas physics, and scroll-driven animations.",
             techStack: ["Next.js", "TypeScript", "Canvas API", "Tailwind"],
-            liveUrl: "https://portfolio-2vp679nf2-ujjawal-singh-solankis-projects.vercel.app/",
+            liveUrl: "https://ujjawal-singh-solanki-portfolio.vercel.app/",
             githubUrl: "https://github.com/ujjawal8461/portfolio.git",
             unlockAt: 0.65
         },
@@ -59,7 +59,7 @@ export default function ProjectsSection() {
             name: "Aesthetic Landing Page",
             description: "A visual-first landing page with bold typography and strong design sensibility.",
             techStack: ["HTML", "CSS", "JavaScript"],
-            liveUrl: "https://landing-page-fgbqqol7g-ujjawal-singh-solankis-projects.vercel.app/",
+            liveUrl: "https://landing-page-aesthetic.vercel.app/",
             githubUrl: "https://github.com/ujjawal8461/aesthetic-page.git",
             unlockAt: 0.8
         }
