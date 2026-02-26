@@ -58,7 +58,7 @@ export default function HeroSection() {
                 originY: 0,
                 bulbRadius: 25 * scaleFactor,
                 segments: 30,
-                naturalRopeLength: isMobileView ? 250 : isTabletView ? 350 : 400,
+                naturalRopeLength: window.innerHeight * 0.38,
                 maxStretch: isMobileView ? 400 : isTabletView ? 550 : 650,
                 minRopeLength: isMobileView ? 100 : isTabletView ? 125 : 150,
                 switchOffsetX: (screenWidth * (switchPercentage - bulbPercentage)) / 100,
@@ -98,7 +98,7 @@ export default function HeroSection() {
         let hasFlickered = false;
         let flickerActive = true;
         let flickerTimer = 0;
-        const flickerDurationFrames = 72 + Math.floor(Math.random() * 60);
+        const flickerDurationFrames = 1 + Math.floor(Math.random() * 40);
         let burstCountdown = 0;
 
         const springConstant = 0.035;
@@ -108,7 +108,7 @@ export default function HeroSection() {
 
         let cachedPositions: Array<{ x: number, y: number, element: HTMLSpanElement }> = [];
         let frameCount = 0;
-        const POSITION_CACHE_FRAMES = 10;
+        const POSITION_CACHE_FRAMES = 60;
         const ropePosRef = { bulbX: 0, switchX: 0 };
 
         const updatePositionCache = () => {
@@ -501,12 +501,12 @@ export default function HeroSection() {
 
             // Draw bulb glow
             if (lightIntensity > 0.5) {
-                const glowRadius = params.bulbRadius * 12;
+                const glowRadius = params.bulbRadius * 6;
                 const gradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, glowRadius);
-                gradient.addColorStop(0, `rgba(255, 240, 150, ${lightIntensity * 0.9})`);
-                gradient.addColorStop(0.2, `rgba(255, 220, 120, ${lightIntensity * 0.7})`);
-                gradient.addColorStop(0.5, `rgba(255, 200, 100, ${lightIntensity * 0.4})`);
-                gradient.addColorStop(0.8, `rgba(255, 180, 80, ${lightIntensity * 0.2})`);
+                gradient.addColorStop(0, `rgba(255, 240, 150, ${lightIntensity * 0.4})`);
+                gradient.addColorStop(0.2, `rgba(255, 220, 120, ${lightIntensity * 0.3})`);
+                gradient.addColorStop(0.5, `rgba(255, 200, 100, ${lightIntensity * 0.2})`);
+                gradient.addColorStop(0.8, `rgba(255, 180, 80, ${lightIntensity * 0.1})`);
                 gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
 
                 ctx.beginPath();
@@ -555,16 +555,18 @@ export default function HeroSection() {
 
             // Update text lighting
             frameCount++;
-            const maxDist = params.isMobileView ? 300 : params.isTabletView ? 350 : 400;
+            const maxDist = params.isMobileView ? 200 : params.isTabletView ? 250 : 300;
             const maxDistSq = maxDist * maxDist;
 
             // When bulb is ON, update every frame so all characters glow continuously.
-            if (isLightOn) {
-                const applyGlow = (el: HTMLSpanElement | undefined) => {
-                    if (!el) return;
+            if (isLightOn && frameCount % 3 === 0) {
+                const applyGlow = (el: HTMLSpanElement | undefined, cached: { x: number, y: number } | undefined) => {
+                    if (!el || !cached) return;
+                    const cx = cached.x;
+                    const cy = cached.y;
                     const rect = el.getBoundingClientRect();
-                    const cx = rect.left + rect.width / 2;
-                    const cy = rect.top + rect.height / 2;
+                    // const cx = rect.left + rect.width / 2;
+                    // const cy = rect.top + rect.height / 2;
                     const dx = bulbX - cx;
                     const dy = bulbY - cy;
                     const distSq = dx * dx + dy * dy;
@@ -572,6 +574,7 @@ export default function HeroSection() {
                     if (distSq > maxDistSq) {
                         el.style.color = 'rgba(128,128,128,0.5)';
                         el.style.textShadow = 'none';
+                        return;
                     } else {
                         const distance = Math.sqrt(distSq);
                         const intensity = (1 - distance / maxDist) * lightIntensity;
@@ -584,8 +587,8 @@ export default function HeroSection() {
                     }
                 };
 
-                letterRefs.current.forEach((el) => applyGlow(el));
-                subTextLetterRefs.current.forEach((el) => applyGlow(el));
+                letterRefs.current.forEach((el, i) => applyGlow(el, cachedPositions[i]));
+                subTextLetterRefs.current.forEach((el, i) => applyGlow(el, cachedPositions[letterRefs.current.length + i]));
             } else if (frameCount % POSITION_CACHE_FRAMES === 0) {
                 // When bulb is OFF, update less frequently: reset to muted styles.
                 letterRefs.current.forEach((el) => {
