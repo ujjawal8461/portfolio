@@ -7,11 +7,13 @@ import AboutSection from "@/components/AboutMe";
 export default function Home() {
   return (
     <main>
+      
       <HeroSection />
       <TimeLineSection />
       <SkillSection />
       <AboutSection />
       <ProjectsSection2 />
+
     </main>
   );
 }
