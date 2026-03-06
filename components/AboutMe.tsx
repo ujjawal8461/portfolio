@@ -98,8 +98,12 @@ export default function AboutSection() {
     const [scrollProgress, setScrollProgress] = useState(0);
     const [hoveredSocial, setHoveredSocial] = useState<number | null>(null);
     const [copied, setCopied] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     const isPowered = (threshold: number) => scrollProgress > threshold;
+    useEffect(() => {
+    setMounted(true);
+}, []);
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -119,6 +123,7 @@ export default function AboutSection() {
     }, []);
 
     const copyEmail = () => {
+        if (typeof window === "undefined") return;
         navigator.clipboard.writeText("ujjawalsinghsolanki1112@gmail.com");
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -280,6 +285,7 @@ export default function AboutSection() {
                     >
                         <SectionLabel icon={<CommitIcon />} text="GitHub Commits" />
                         <div style={{ overflowX: "auto" }}>
+                            {mounted && (
                             <GitHubCalendar
                                 username="ujjawal8461"
                                 blockSize={14}
@@ -296,6 +302,7 @@ export default function AboutSection() {
                                     ]
                                 }}
                             />
+                            )}
                         </div>
                     </div>
 
