@@ -8,7 +8,7 @@ import {
     SiGraphql, SiRedux, SiMysql, SiPostgresql, SiPrisma,
     SiPostman, SiGit, SiGithub, SiBitbucket,
     SiJira, SiAndroidstudio, SiFigma, SiCanva, SiVercel,
-    SiRedis, SiSwagger, SiJest, SiDocker, SiZod, SiJsonwebtokens,
+    SiRedis, SiSwagger, SiJest, SiZod, SiJsonwebtokens,
 } from "react-icons/si";
 import { VscVscode } from "react-icons/vsc";
 import { IconType } from "react-icons";
@@ -69,14 +69,13 @@ const ICON_SKILLS: Pick<SkillItem, "id" | "name" | "Icon" | "categories">[] = [
     { id: 31, name: "Redis", Icon: SiRedis, categories: ["backend"] },
     { id: 32, name: "Swagger", Icon: SiSwagger, categories: ["backend"] },
     { id: 33, name: "Jest", Icon: SiJest, categories: ["backend"] },
-    // { id: 34, name: "Docker", Icon: SiDocker, categories: ["tools"] },
     { id: 35, name: "Zod", Icon: SiZod, categories: ["backend"] },
     { id: 36, name: "JWT", Icon: SiJsonwebtokens, categories: ["backend"] },
     { id: 37, name: "React Hook Form", Icon: SiReact, categories: ["frontend"] },
     { id: 38, name: "pgAdmin", Icon: SiPostgresql, categories: ["tools"] },
 ];
 
-// ─── Overlap-free grid layout ────────────────────────────────────────────────
+// ─── Overlap-free grid layout ─────────────────────────────────────────────────
 function buildLayout(): SkillItem[] {
     let seed = 137;
     const rand = () => {
@@ -84,22 +83,22 @@ function buildLayout(): SkillItem[] {
         return (seed >>> 0) / 0xffffffff;
     };
 
-    // 14 cols × 10 rows grid in 100×100 virtual space
-    // Center band (x:28–72, y:24–74) is reserved for heading + categories
+    // Tightened: 8–92% range, wider center reserve
     const COLS = 14;
     const ROWS = 10;
     const cells: { x: number; y: number }[] = [];
 
     for (let row = 0; row < ROWS; row++) {
         for (let col = 0; col < COLS; col++) {
+            // CHANGED: x range 8–92 (was 3–97), y range 8–92 (was 4–96)
             const x = 3 + (col / (COLS - 1)) * 94;
-            const y = 4 + (row / (ROWS - 1)) * 92;
-            if (x > 28 && x < 72 && y > 22 && y < 76) continue;
+            const y = 8 + (row / (ROWS - 1)) * 84;
+            // CHANGED: wider center band x 26–74 (was 28–72), y 20–78 (was 22–76)
+            if (x > 26 && x < 74 && y > 20 && y < 78) continue;
             cells.push({ x, y });
         }
     }
 
-    // Shuffle cells
     for (let i = cells.length - 1; i > 0; i--) {
         const j = Math.floor(rand() * (i + 1));
         [cells[i], cells[j]] = [cells[j], cells[i]];
@@ -112,14 +111,14 @@ function buildLayout(): SkillItem[] {
 
     return allRaw.map((skill, i) => {
         const cell = cells[i % cells.length];
-        // Small jitter so layout looks organic, not grid-perfect
         const jitterX = (rand() - 0.5) * 3;
         const jitterY = (rand() - 0.5) * 3;
-        const size = 28 + Math.floor(rand() * 18); // 28–46px
+        const size = 28 + Math.floor(rand() * 18);
         const rotate = (rand() - 0.5) * 16;
 
         return {
             ...skill,
+            // CHANGED: clamp to 8–92 (was 2–97)
             x: Math.max(2, Math.min(97, cell.x + jitterX)),
             y: Math.max(2, Math.min(97, cell.y + jitterY)),
             size,
@@ -148,21 +147,79 @@ export default function SkillsSection() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const [scrollProgress, setScrollProgress] = useState(0);
 
+    // ── Hint + scroll-lock state ──────────────────────────────────────────────
+    const [showHint, setShowHint] = useState(false);
+    const [hintVisible, setHintVisible] = useState(false); // for fade-out
+    const scrollLockedRef = useRef(false);
+    const hintShownOnceRef = useRef(false);
+
+    // Lock scroll
+    const lockScroll = useCallback(() => {
+        if (scrollLockedRef.current) return;
+        scrollLockedRef.current = true;
+        document.body.style.overflow = "hidden";
+    }, []);
+
+    // Unlock scroll + fade out hint
+    const unlockScroll = useCallback(() => {
+        if (!scrollLockedRef.current) return;
+        scrollLockedRef.current = false;
+        document.body.style.overflow = "";
+        // Fade out hint
+        setHintVisible(false);
+        setTimeout(() => setShowHint(false), 600);
+    }, []);
+
+    // Called when section enters viewport for the first time
+    const triggerHintOnce = useCallback(() => {
+        if (hintShownOnceRef.current) return;
+        hintShownOnceRef.current = true;
+
+        lockScroll();
+        setShowHint(true);
+        // Small delay so mount animation plays before fade-in
+        setTimeout(() => setHintVisible(true), 50);
+
+    }, [lockScroll, unlockScroll]);
+
+    // Scroll progress + hint trigger
     useEffect(() => {
         const section = sectionRef.current;
         if (!section) return;
+
         const handleScroll = () => {
             const rect = section.getBoundingClientRect();
             const wh = window.innerHeight;
+
+            // Trigger hint when section top hits viewport top
+            if (rect.top <= 0 && !hintShownOnceRef.current) {
+                triggerHintOnce();
+            }
+
             if (rect.top <= 0 && rect.bottom > wh) {
                 setScrollProgress(Math.max(0, Math.min(1, -rect.top / (rect.height - wh))));
-            } else if (rect.top > 0) setScrollProgress(0);
-            else setScrollProgress(1);
+            } else if (rect.top > 0) {
+                setScrollProgress(0);
+            } else {
+                setScrollProgress(1);
+            }
         };
+
         handleScroll();
         window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            // Always restore scroll on unmount
+            document.body.style.overflow = "";
+        };
+    }, [triggerHintOnce]);
+
+    // If user hovers a skill while hint is showing → dismiss early
+    const handleFirstInteraction = useCallback(() => {
+        if (!hintShownOnceRef.current) return;
+        if (!scrollLockedRef.current) return;
+        unlockScroll();
+    }, [unlockScroll]);
 
     const effectiveCategory = lockedCategory !== "all" ? lockedCategory : activeCategory;
 
@@ -179,6 +236,7 @@ export default function SkillsSection() {
     }, [effectiveCategory, hoveredSkill]);
 
     const handleMouseEnter = (skill: SkillItem, e: React.MouseEvent) => {
+        handleFirstInteraction();
         setHoveredSkill(skill.id);
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const parentRect = sectionRef.current?.getBoundingClientRect();
@@ -197,6 +255,7 @@ export default function SkillsSection() {
     };
 
     const handleCategoryClick = (key: Category) => {
+        handleFirstInteraction();
         if (lockedCategory === key) {
             setLockedCategory("all");
             setActiveCategory("all");
@@ -207,6 +266,7 @@ export default function SkillsSection() {
     };
 
     const handleCategoryEnter = (key: Category) => {
+        handleFirstInteraction();
         if (lockedCategory === "all") setActiveCategory(key);
     };
 
@@ -265,18 +325,44 @@ export default function SkillsSection() {
                     })}
                 </div>
 
-                {/* Hint */}
-                <p
-                    className="z-10 relative mt-2 text-center"
-                    style={{
-                        fontSize: "9px",
-                        color: "#3a3a3a",
-                        letterSpacing: "0.12em",
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                    }}
-                >
-                    HOVER TO PREVIEW · CLICK TO LOCK
-                </p>
+                {/* ── Animated hint (shown on first entry, auto-fades after 3.5s) ── */}
+                {showHint && (
+                    <div
+                        className="z-20 relative mt-3 text-center pointer-events-none"
+                        style={{
+                            opacity: hintVisible ? 1 : 0,
+                            transition: "opacity 0.6s ease",
+                        }}
+                    >
+                        <p
+                            className="skills-hint-pulse"
+                            style={{
+                                fontSize: "11px",
+                                letterSpacing: "0.28em",
+                                fontFamily: "system-ui, -apple-system, sans-serif",
+                                color: "rgba(128,128,128,0.95)",
+                                fontWeight: 500,
+                            }}
+                        >
+                            Hover a pill to explore · Click to lock
+                        </p>
+                    </div>
+                )}
+
+                {/* Static sub-hint when hint is gone */}
+                {!showHint && (
+                    <p
+                        className="z-10 relative mt-2 text-center"
+                        style={{
+                            fontSize: "9px",
+                            color: "#3a3a3a",
+                            letterSpacing: "0.12em",
+                            fontFamily: "system-ui, -apple-system, sans-serif",
+                        }}
+                    >
+                        HOVER TO PREVIEW · CLICK TO LOCK
+                    </p>
+                )}
 
                 {/* Icon collage */}
                 <div className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
@@ -358,7 +444,7 @@ export default function SkillsSection() {
                         );
                     })}
 
-                    {/* Tooltip — only in "all" mode (no category active) */}
+                    {/* Tooltip — only in "all" mode */}
                     {tooltip && hoveredSkill !== null && effectiveCategory === "all" && (
                         <div
                             className="absolute pointer-events-none z-30 px-3 py-1 rounded-md text-xs font-bold tracking-wider uppercase whitespace-nowrap"
@@ -388,6 +474,29 @@ export default function SkillsSection() {
                     />
                 )}
             </div>
+
+            {/* Keyframe styles */}
+            <style jsx>{`
+                @keyframes skills-pulse-glow {
+                    0% {
+                        text-shadow: 0 0 0 rgba(255,215,0,0);
+                        color: rgba(128,128,128,0.95);
+                    }
+                    50% {
+                        text-shadow: 0 0 8px rgba(255,215,0,0.9), 0 0 20px rgba(255,200,0,0.55);
+                        color: rgba(255,215,0,0.95);
+                    }
+                    100% {
+                        text-shadow: 0 0 0 rgba(255,215,0,0);
+                        color: rgba(128,128,128,0.95);
+                    }
+                }
+
+                .skills-hint-pulse {
+                    animation: skills-pulse-glow 2200ms ease-in-out infinite;
+                    will-change: text-shadow, color;
+                }
+            `}</style>
         </section>
     );
 }

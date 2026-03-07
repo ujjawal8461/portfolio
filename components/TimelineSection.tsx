@@ -48,7 +48,7 @@ export default function CircuitTimeline() {
         },
         {
             id: 5,
-            year: "2022",
+            year: "Sep 2022 - Nov 2022",
             title: "Web Developer Intern",
             location: "Physics Wallah",
             x: 0.65,
@@ -56,7 +56,7 @@ export default function CircuitTimeline() {
         },
         {
             id: 6,
-            year: "2024",
+            year: "July 2024 - Present",
             title: "Junior Developer",
             location: "Dexbytes Infotech",
             x: 0.85,
