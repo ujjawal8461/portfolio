@@ -20,11 +20,35 @@ const spaceGrotesk = Space_Grotesk({
   weight: ["400", "700"], // 👈 remove 800
 });
 
-export const metadata: Metadata = {
-  title: "Ujjawal Singh Solanki | Portfolio",
-  description: "An interactive portfolio powered by circuits and light",
-};
+export const metadata = {
+  title: "Ujjawal Singh Solanki | Software Engineer",
+  description: "Portfolio of Ujjawal Singh Solanki, a software engineer specializing in React and Next.js.",
 
+  keywords: [
+    "Ujjawal Singh Solanki",
+    "Software Engineer",
+    "React Developer",
+    "Next.js Developer",
+    "Web Developer Portfolio"
+  ],
+
+  authors: [{ name: "Ujjawal Singh Solanki" }],
+
+  openGraph: {
+    title: "Ujjawal Singh Solanki Portfolio",
+    description: "Software engineer portfolio with projects and skills.",
+    url: "https://ujjawal-singh-solanki-portfolio.vercel.app/",
+    siteName: "Ujjawal Singh Solanki Portfolio",
+    images: [
+      {
+        url: "logo.png",
+        width: 1200,
+        height: 630
+      }
+    ],
+    type: "website"
+  }
+};
 export default function RootLayout({
   children,
 }: Readonly<{

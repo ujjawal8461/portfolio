@@ -20,42 +20,42 @@ export default function ProjectsSection() {
     const projects: Project[] = [
         {
             id: 1,
-            name: "SaaS Project Management",
-            description: "A backend-driven project management system built for teams. Handles auth, workspaces, tasks, and role-based permissions.",
-            techStack: ["Node.js", "Express", "MongoDB", "JWT", "REST API"],
-            liveUrl: null,
-            githubUrl: "https://github.com/ujjawal8461/project-management-backend",
-            unlockAt: 0.1
-        },
-        {
-            id: 2,
             name: "Netflix Clone",
             description: "A faithful recreation of Netflix UI with movie browsing, categories, and responsive layout.",
             techStack: ["React", "CSS", "TMDB API", "Vercel"],
             liveUrl: "https://netflix-clone-8461.vercel.app/",
             githubUrl: "https://github.com/ujjawal8461/netflix-clone",
+            unlockAt: 0.1
+        },
+        {
+            id: 2,
+            name: "SaaS Project Management",
+            description: "A backend-driven project management system built for teams. Handles auth, workspaces, tasks, and role-based permissions.",
+            techStack: ["Node.js", "Express", "MongoDB", "JWT", "REST API"],
+            liveUrl: null,
+            githubUrl: "https://github.com/ujjawal8461/project-management-backend",
             unlockAt: 0.3
         },
+        // {
+        //     id: 3,
+        //     name: "Rock Paper Scissors",
+        //     description: "Classic game with clean UI, score tracking, and smooth interactions.",
+        //     techStack: ["HTML", "CSS", "JavaScript"],
+        //     liveUrl: "https://rock-paper-scissor-8461.vercel.app/",
+        //     githubUrl: "https://github.com/ujjawal8461/Rock-Paper-Scissor.git",
+        //     unlockAt: 0.5
+        // },
         {
             id: 3,
-            name: "Rock Paper Scissors",
-            description: "Classic game with clean UI, score tracking, and smooth interactions.",
-            techStack: ["HTML", "CSS", "JavaScript"],
-            liveUrl: "https://rock-paper-scissor-8461.vercel.app/",
-            githubUrl: "https://github.com/ujjawal8461/Rock-Paper-Scissor.git",
-            unlockAt: 0.5
-        },
-        {
-            id: 4,
             name: "Portfolio",
             description: "This very site. Built with Next.js, canvas physics, and scroll-driven animations.",
             techStack: ["Next.js", "TypeScript", "Canvas API", "Tailwind"],
             liveUrl: "https://ujjawal-singh-solanki-portfolio.vercel.app/",
             githubUrl: "https://github.com/ujjawal8461/portfolio.git",
-            unlockAt: 0.65
+            unlockAt: 0.5
         },
         {
-            id: 5,
+            id: 4,
             name: "Aesthetic Landing Page",
             description: "A visual-first landing page with bold typography and strong design sensibility.",
             techStack: ["HTML", "CSS", "JavaScript"],

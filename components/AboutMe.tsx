@@ -133,7 +133,7 @@ export default function AboutSection() {
         <section
             ref={sectionRef}
             className="relative w-full bg-black"
-            style={{ minHeight: "280vh" }}
+            style={{ minHeight: "160vh" }}
         >
             <div
                 className="sticky top-0 h-screen flex flex-col items-center justify-center py-8 px-4"
@@ -162,9 +162,9 @@ export default function AboutSection() {
                         <div
                             className="rounded-2xl p-6 transition-all duration-700"
                             style={{
-                                border: `1px solid ${isPowered(0.03) ? "rgba(255,215,0,0.25)" : "rgba(40,40,40,0.6)"}`,
-                                opacity: isPowered(0.03) ? 1 : 0.3,
-                                transform: isPowered(0.03) ? "translateY(0)" : "translateY(20px)"
+                                border: `1px solid ${isPowered(0.05) ? "rgba(255,215,0,0.25)" : "rgba(40,40,40,0.6)"}`,
+                                opacity: isPowered(0.05) ? 1 : 0.3,
+                                transform: isPowered(0.05) ? "translateY(0)" : "translateY(20px)"
                             }}
                         >
                             <SectionLabel icon={<PersonIcon />} text="Who I Am" />
@@ -173,7 +173,7 @@ export default function AboutSection() {
                             </h3>
                             <p className="mb-3" style={{ fontSize: "0.85rem", color: "rgba(255,215,0,0.5)" }}>Full-Stack Developer · Indore, India</p>
                             <p style={{ fontSize: "0.85rem", lineHeight: 1.7, color: isPowered(0.03) ? "rgba(200,200,200,0.85)" : "#333" }}>
-                                I build full-stack web products — from pixel-perfect frontends to scalable backends. Currently at Dexbytes Infotech, turning complex problems into clean, engineered solutions.
+                               I’m a 23 year old Software Engineer with 2 years of experience in the MERN stack. I enjoy building web applications and working through the challenges that come with creating real products. I’m passionate about creativity and use web development to turn ideas into real applications
                             </p>
                             <div className="flex gap-6 mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,215,0,0.1)" }}>
                                 {[["B.Tech", "CS · CDGI"], ["2022", "PW Intern"], ["2024", "Dexbytes"]].map(([label, sub]) => (
@@ -189,9 +189,9 @@ export default function AboutSection() {
                         <div
                             className="rounded-2xl p-6 transition-all duration-700"
                             style={{
-                                border: `1px solid ${isPowered(0.03) ? "rgba(255,215,0,0.25)" : "rgba(40,40,40,0.6)"}`,
-                                opacity: isPowered(0.03) ? 1 : 0.3,
-                                transform: isPowered(0.03) ? "translateY(0)" : "translateY(20px)",
+                                border: `1px solid ${isPowered(0.25) ? "rgba(255,215,0,0.25)" : "rgba(40,40,40,0.6)"}`,
+                                opacity: isPowered(0.25) ? 1 : 0.3,
+                                transform: isPowered(0.25) ? "translateY(0)" : "translateY(20px)",
                                 transitionDelay: "0.08s"
                             }}
                         >
@@ -206,7 +206,7 @@ export default function AboutSection() {
                                     <div>
                                         <div style={{ fontSize: "11px", color: "rgba(150,150,150,0.7)" }}>Email</div>
                                         <div style={{ fontSize: "0.9rem", fontWeight: 500, color: isPowered(0.03) ? "rgba(255,215,0,0.9)" : "#444" }}>
-                                            {copied ? "Copied! ✓" : "ujjawal.singh@gmail.com"}
+                                            {copied ? "Copied! ✓" : "ujjawalsinghsolanki1112@gmail.com"}
                                         </div>
                                     </div>
                                 </button>
@@ -227,7 +227,7 @@ export default function AboutSection() {
                                     onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 0 30px rgba(255,215,0,0.35)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                                     onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; }}
                                 >
-                                    <DownloadIcon /> Download CV
+                                    <DownloadIcon /> Download Resume
                                 </a>
                                 <a href="resume_ujjawal_solanki.pdf" target="_blank" rel="noopener noreferrer"
                                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold tracking-widest uppercase transition-all duration-300 flex-1"
@@ -235,7 +235,7 @@ export default function AboutSection() {
                                     onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,215,0,0.06)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.transform = "translateY(0)"; }}
                                 >
-                                    <ExternalIcon /> View CV
+                                    <ExternalIcon /> View Resume
                                 </a>
                             </div>
                         </div>
@@ -245,9 +245,9 @@ export default function AboutSection() {
                     <div
                         className="rounded-2xl p-5 transition-all duration-700"
                         style={{
-                            border: `1px solid ${isPowered(0.03) ? "rgba(255,215,0,0.2)" : "rgba(30,30,30,0.6)"}`,
-                            opacity: isPowered(0.03) ? 1 : 0.2,
-                            transform: isPowered(0.03) ? "translateY(0)" : "translateY(30px)",
+                            border: `1px solid ${isPowered(0.50) ? "rgba(255,215,0,0.2)" : "rgba(30,30,30,0.6)"}`,
+                            opacity: isPowered(0.50) ? 1 : 0.2,
+                            transform: isPowered(0.50) ? "translateY(0)" : "translateY(30px)",
                             transitionDelay: "0.12s"
                         }}
                     >
@@ -277,24 +277,28 @@ export default function AboutSection() {
                     <div
                         className="rounded-2xl p-5 transition-all duration-700"
                         style={{
-                            border: `1px solid ${isPowered(0.15) ? "rgba(255,215,0,0.2)" : "rgba(30,30,30,0.6)"}`,
-                            opacity: isPowered(0.15) ? 1 : 0.1,
-                            transform: isPowered(0.15) ? "translateY(0)" : "translateY(40px)",
+                            border: `1px solid ${isPowered(0.75) ? "rgba(255,215,0,0.2)" : "rgba(30,30,30,0.6)"}`,
+                            opacity: isPowered(0.75) ? 1 : 0.1,
+                            transform: isPowered(0.75) ? "translateY(0)" : "translateY(40px)",
                             transitionDelay: "0.18s"
                         }}
                     >
                         <SectionLabel icon={<CommitIcon />} text="GitHub Commits" />
-                        <div style={{ overflowX: "auto" }}>
+                        <div  style={{
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    overflowX: "auto"
+                                }}>
                             {mounted && (
                             <GitHubCalendar
                                 username="ujjawal8461"
-                                blockSize={14}
+                                blockSize={13}
                                 blockMargin={5}
                                 fontSize={14}
                                 colorScheme="dark"
                                 theme={{
                                     dark: [
-                                        "rgba(101,101,101,0.21)",
+                                        "rgba(70, 69, 69, 0.36)",
                                         "rgba(255,215,0,0.35)",
                                         "rgba(255,215,0,0.55)",
                                         "rgba(255,215,0,0.75)",

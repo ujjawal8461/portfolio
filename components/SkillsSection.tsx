@@ -354,7 +354,7 @@ export default function SkillsSection() {
                     <p
                         className="z-10 relative mt-2 text-center"
                         style={{
-                            fontSize: "9px",
+                            fontSize: "13px",
                             color: "#3a3a3a",
                             letterSpacing: "0.12em",
                             fontFamily: "system-ui, -apple-system, sans-serif",
