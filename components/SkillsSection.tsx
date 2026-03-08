@@ -325,10 +325,55 @@ export default function SkillsSection() {
                     })}
                 </div>
 
+                {/* ── Skill name display strip ── */}
+                <div
+                className="z-10 absolute flex flex-wrap justify-center items-center gap-2 px-6"
+                style={{
+                    top: "58%",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    maxWidth: "680px"
+                }}
+                >
+                 {effectiveCategory !== "all"
+                        ? skills
+                            .filter((sk) => sk.categories.includes(effectiveCategory))
+                            .map((sk) => (
+                                <span
+                                    key={sk.id}
+                                    style={{
+                                            fontSize: "11px",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.12em",
+                                        textTransform: "uppercase",
+                                        color: "#FFD700",
+
+                                        padding: "6px 14px",
+                                        borderRadius: "8px",
+
+                                        border: "1px solid rgba(255,215,0,0.6)",
+                                        background: "rgba(255,215,0,0.08)",
+
+                                        boxShadow: "0 0 12px rgba(255,215,0,0.35)",
+                                        
+                                        display: "inline-block",
+                                        margin: "4px",
+
+                                        fontFamily: "system-ui, -apple-system, sans-serif",
+                                        transition: "all 0.2s ease",
+                                    }}
+                                >
+                                    {sk.name}
+                                </span>
+                            ))
+                        : null
+                    }
+                </div>
+
                 {/* ── Animated hint (shown on first entry, auto-fades after 3.5s) ── */}
                 {showHint && (
                     <div
-                        className="z-20 relative mt-3 text-center pointer-events-none"
+                        className="z-20 relative text-center pointer-events-none"
                         style={{
                             opacity: hintVisible ? 1 : 0,
                             transition: "opacity 0.6s ease",

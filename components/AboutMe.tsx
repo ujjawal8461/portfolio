@@ -99,11 +99,22 @@ export default function AboutSection() {
     const [hoveredSocial, setHoveredSocial] = useState<number | null>(null);
     const [copied, setCopied] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [isTablet, setIsTablet] = useState(false);
 
-    const isPowered = (threshold: number) => scrollProgress > threshold;
+    // On mobile always treat everything as powered so content is always visible
+    const isPowered = (threshold: number) => isMobile ? true : scrollProgress > threshold;
+
     useEffect(() => {
-    setMounted(true);
-}, []);
+        setMounted(true);
+        const checkSize = () => {
+            setIsMobile(window.innerWidth < 768);
+            setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+        };
+        checkSize();
+        window.addEventListener("resize", checkSize);
+        return () => window.removeEventListener("resize", checkSize);
+    }, []);
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -129,189 +140,213 @@ export default function AboutSection() {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    // Responsive calendar block size
+    const calendarBlockSize = isMobile ? 8 : isTablet ? 10 : 13;
+    const calendarBlockMargin = isMobile ? 3 : isTablet ? 4 : 5;
+    const calendarFontSize = isMobile ? 10 : isTablet ? 12 : 14;
+
+    const cards = (
+        <>
+            {/* BIO + CONTACT */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+
+                {/* Bio card */}
+                <div
+                    className="rounded-2xl p-4 md:p-5 transition-all duration-700"
+                    style={{
+                        border: `1px solid ${isPowered(0.05) ? "rgba(255,215,0,0.25)" : "rgba(40,40,40,0.6)"}`,
+                        opacity: isPowered(0.05) ? 1 : 0.3,
+                        transform: isPowered(0.05) ? "translateY(0)" : "translateY(20px)"
+                    }}
+                >
+                    <SectionLabel icon={<PersonIcon />} text="Who I Am" />
+                    <h3 className="font-bold mb-0.5" style={{ fontSize: "clamp(0.95rem, 2vw, 1.15rem)", color: isPowered(0.03) ? "#FFD700" : "#333", fontFamily: "system-ui" }}>
+                        Ujjawal Singh Solanki
+                    </h3>
+                    <p className="mb-2" style={{ fontSize: "0.8rem", color: "rgba(255,215,0,0.5)" }}>Full-Stack Developer · Indore, India</p>
+                    <p style={{ fontSize: "0.8rem", lineHeight: 1.65, color: isPowered(0.03) ? "rgba(200,200,200,0.85)" : "#333" }}>
+                        I'm a 23 year old Software Engineer with 2 years of experience in the MERN stack. I enjoy building web applications and working through the challenges that come with creating real products. I'm passionate about creativity and use web development to turn ideas into real applications.
+                    </p>
+                    <div className="flex flex-wrap gap-4 mt-3 pt-3" style={{ borderTop: "1px solid rgba(255,215,0,0.1)" }}>
+                        {[["B.Tech", "CS · CDGI"], ["2022", "PW Intern"], ["2024", "Dexbytes"]].map(([label, sub]) => (
+                            <div key={label}>
+                                <div style={{ fontSize: "0.82rem", fontWeight: 700, color: isPowered(0.03) ? "#FFD700" : "#333" }}>{label}</div>
+                                <div style={{ fontSize: "0.72rem", color: "rgba(150,150,150,0.7)" }}>{sub}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Contact card */}
+                <div
+                    className="rounded-2xl p-4 md:p-5 transition-all duration-700"
+                    style={{
+                        border: `1px solid ${isPowered(0.25) ? "rgba(255,215,0,0.25)" : "rgba(40,40,40,0.6)"}`,
+                        opacity: isPowered(0.25) ? 1 : 0.3,
+                        transform: isPowered(0.25) ? "translateY(0)" : "translateY(20px)",
+                        transitionDelay: "0.08s"
+                    }}
+                >
+                    <SectionLabel icon={<MailIcon />} text="Reach Me" />
+                    <div className="flex flex-col gap-2 mb-3">
+                        <button
+                            onClick={copyEmail}
+                            className="flex items-center gap-3 w-full rounded-xl px-3 py-2 text-left transition-all duration-300"
+                            style={{ background: "rgba(255,215,0,0.04)", border: "1px solid rgba(255,215,0,0.12)", cursor: "pointer" }}
+                        >
+                            <span style={{ color: "rgba(255,215,0,0.7)", flexShrink: 0 }}><MailIcon /></span>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: "10px", color: "rgba(150,150,150,0.7)" }}>Email</div>
+                                <div style={{ fontSize: "0.8rem", fontWeight: 500, color: isPowered(0.03) ? "rgba(255,215,0,0.9)" : "#444", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {copied ? "Copied! ✓" : "ujjawalsinghsolanki1112@gmail.com"}
+                                </div>
+                            </div>
+                        </button>
+                        <div className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: "rgba(255,215,0,0.04)", border: "1px solid rgba(255,215,0,0.12)" }}>
+                            <span style={{ color: "rgba(255,215,0,0.7)", flexShrink: 0 }}><PhoneIcon /></span>
+                            <div>
+                                <div style={{ fontSize: "10px", color: "rgba(150,150,150,0.7)" }}>Phone</div>
+                                <div style={{ fontSize: "0.8rem", fontWeight: 500, color: isPowered(0.03) ? "rgba(255,215,0,0.9)" : "#444" }}>+91 84618 26896</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 pt-3" style={{ borderTop: "1px solid rgba(255,215,0,0.08)" }}>
+                        <a href="/resume_ujjawal_solanki.pdf" download
+                            className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold tracking-widest uppercase transition-all duration-300 flex-1"
+                            style={{ background: "rgba(255,215,0,0.08)", border: "2px solid rgba(255,215,0,0.7)", color: "#FFD700", textDecoration: "none", fontSize: "10px", whiteSpace: "nowrap" }}
+                            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 0 30px rgba(255,215,0,0.35)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; }}
+                        >
+                            <DownloadIcon /> Download Resume
+                        </a>
+                        <a href="resume_ujjawal_solanki.pdf" target="_blank" rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold tracking-widest uppercase transition-all duration-300 flex-1"
+                            style={{ border: "2px solid rgba(255,215,0,0.3)", color: "rgba(255,215,0,0.8)", textDecoration: "none", fontSize: "10px", whiteSpace: "nowrap" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,215,0,0.06)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                        >
+                            <ExternalIcon /> View Resume
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {/* SOCIALS */}
+            <div
+                className="rounded-2xl p-4 transition-all duration-700"
+                style={{
+                    border: `1px solid ${isPowered(0.50) ? "rgba(255,215,0,0.2)" : "rgba(30,30,30,0.6)"}`,
+                    opacity: isPowered(0.50) ? 1 : 0.2,
+                    transform: isPowered(0.50) ? "translateY(0)" : "translateY(30px)",
+                    transitionDelay: "0.12s"
+                }}
+            >
+                <SectionLabel icon={<LinkIcon />} text="Find Me Online" />
+                <div className="grid grid-cols-5 gap-2">
+                    {SOCIALS.map((social, i) => (
+                        <a key={i} href={social.url} target="_blank" rel="noopener noreferrer"
+                            className="flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-300"
+                            style={{
+                                background: hoveredSocial === i ? "rgba(255,215,0,0.07)" : "transparent",
+                                border: `1px solid ${hoveredSocial === i ? "rgba(255,215,0,0.45)" : "rgba(255,215,0,0.1)"}`,
+                                textDecoration: "none",
+                                transform: hoveredSocial === i ? "translateY(-3px) scale(1.04)" : "none",
+                                boxShadow: hoveredSocial === i ? "0 6px 18px rgba(255,215,0,0.12)" : "none"
+                            }}
+                            onMouseEnter={() => setHoveredSocial(i)}
+                            onMouseLeave={() => setHoveredSocial(null)}
+                        >
+                            <span style={{ color: "rgba(255,215,0,0.75)" }}>{social.icon}</span>
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,215,0,0.7)" }}>{social.name}</span>
+                        </a>
+                    ))}
+                </div>
+            </div>
+
+            {/* GITHUB CALENDAR */}
+            <div
+                className="rounded-2xl p-4 transition-all duration-700"
+                style={{
+                    border: `1px solid ${isPowered(0.75) ? "rgba(255,215,0,0.2)" : "rgba(30,30,30,0.6)"}`,
+                    opacity: isPowered(0.75) ? 1 : 0.1,
+                    transform: isPowered(0.75) ? "translateY(0)" : "translateY(40px)",
+                    transitionDelay: "0.18s"
+                }}
+            >
+                <SectionLabel icon={<CommitIcon />} text="GitHub Commits" />
+                {/* Scrollable wrapper so calendar is never clipped */}
+                <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" as any, paddingBottom: "4px" }}>
+                    {mounted && (
+                        <GitHubCalendar
+                            username="ujjawal8461"
+                            blockSize={calendarBlockSize}
+                            blockMargin={calendarBlockMargin}
+                            fontSize={calendarFontSize}
+                            colorScheme="dark"
+                            theme={{
+                                dark: [
+                                    "rgba(70, 69, 69, 0.36)",
+                                    "rgba(255,215,0,0.35)",
+                                    "rgba(255,215,0,0.55)",
+                                    "rgba(255,215,0,0.75)",
+                                    "rgba(255,215,0,1)"
+                                ]
+                            }}
+                        />
+                    )}
+                </div>
+            </div>
+        </>
+    );
+
     return (
         <section
             ref={sectionRef}
             className="relative w-full bg-black"
-            style={{ minHeight: "160vh" }}
+            style={{ minHeight: isMobile ? "auto" : "200vh" }}
         >
-            <div
-                className="sticky top-0 h-screen flex flex-col items-center justify-center py-8 px-4"
-                style={{ zIndex: 2, overflowY: "hidden" }}
-            >
-                <h2
-                    className="text-center font-bold tracking-[0.3em] uppercase mb-6"
-                    style={{
-                        fontSize: "clamp(2rem, 5vw, 3.5rem)",
-                        color: isPowered(0.03) ? "#FFD700" : "#333",
-                        textShadow: isPowered(0.03) ? "0 0 60px rgba(255,215,0,0.5), 0 0 120px rgba(255,215,0,0.2)" : "none",
-                        transition: "all 0.6s ease",
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                        flexShrink: 0
-                    }}
-                >
-                    ABOUT ME
-                </h2>
-
-                <div className="w-full max-w-5xl flex flex-col gap-4">
-
-                    {/* BIO + CONTACT */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                        {/* Bio card */}
-                        <div
-                            className="rounded-2xl p-6 transition-all duration-700"
-                            style={{
-                                border: `1px solid ${isPowered(0.05) ? "rgba(255,215,0,0.25)" : "rgba(40,40,40,0.6)"}`,
-                                opacity: isPowered(0.05) ? 1 : 0.3,
-                                transform: isPowered(0.05) ? "translateY(0)" : "translateY(20px)"
-                            }}
-                        >
-                            <SectionLabel icon={<PersonIcon />} text="Who I Am" />
-                            <h3 className="font-bold mb-1" style={{ fontSize: "1.2rem", color: isPowered(0.03) ? "#FFD700" : "#333", fontFamily: "system-ui" }}>
-                                Ujjawal Singh Solanki
-                            </h3>
-                            <p className="mb-3" style={{ fontSize: "0.85rem", color: "rgba(255,215,0,0.5)" }}>Full-Stack Developer · Indore, India</p>
-                            <p style={{ fontSize: "0.85rem", lineHeight: 1.7, color: isPowered(0.03) ? "rgba(200,200,200,0.85)" : "#333" }}>
-                               I’m a 23 year old Software Engineer with 2 years of experience in the MERN stack. I enjoy building web applications and working through the challenges that come with creating real products. I’m passionate about creativity and use web development to turn ideas into real applications
-                            </p>
-                            <div className="flex gap-6 mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,215,0,0.1)" }}>
-                                {[["B.Tech", "CS · CDGI"], ["2022", "PW Intern"], ["2024", "Dexbytes"]].map(([label, sub]) => (
-                                    <div key={label}>
-                                        <div style={{ fontSize: "0.85rem", fontWeight: 700, color: isPowered(0.03) ? "#FFD700" : "#333" }}>{label}</div>
-                                        <div style={{ fontSize: "0.75rem", color: "rgba(150,150,150,0.7)" }}>{sub}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Contact card */}
-                        <div
-                            className="rounded-2xl p-6 transition-all duration-700"
-                            style={{
-                                border: `1px solid ${isPowered(0.25) ? "rgba(255,215,0,0.25)" : "rgba(40,40,40,0.6)"}`,
-                                opacity: isPowered(0.25) ? 1 : 0.3,
-                                transform: isPowered(0.25) ? "translateY(0)" : "translateY(20px)",
-                                transitionDelay: "0.08s"
-                            }}
-                        >
-                            <SectionLabel icon={<MailIcon />} text="Reach Me" />
-                            <div className="flex flex-col gap-3 mb-4">
-                                <button
-                                    onClick={copyEmail}
-                                    className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-left transition-all duration-300"
-                                    style={{ background: "rgba(255,215,0,0.04)", border: "1px solid rgba(255,215,0,0.12)", cursor: "pointer" }}
-                                >
-                                    <span style={{ color: "rgba(255,215,0,0.7)" }}><MailIcon /></span>
-                                    <div>
-                                        <div style={{ fontSize: "11px", color: "rgba(150,150,150,0.7)" }}>Email</div>
-                                        <div style={{ fontSize: "0.9rem", fontWeight: 500, color: isPowered(0.03) ? "rgba(255,215,0,0.9)" : "#444" }}>
-                                            {copied ? "Copied! ✓" : "ujjawalsinghsolanki1112@gmail.com"}
-                                        </div>
-                                    </div>
-                                </button>
-                                <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ background: "rgba(255,215,0,0.04)", border: "1px solid rgba(255,215,0,0.12)" }}>
-                                    <span style={{ color: "rgba(255,215,0,0.7)" }}><PhoneIcon /></span>
-                                    <div>
-                                        <div style={{ fontSize: "11px", color: "rgba(150,150,150,0.7)" }}>Phone</div>
-                                        <div style={{ fontSize: "0.9rem", fontWeight: 500, color: isPowered(0.03) ? "rgba(255,215,0,0.9)" : "#444" }}>
-                                            +91 84618 26896
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex gap-3 pt-4" style={{ borderTop: "1px solid rgba(255,215,0,0.08)" }}>
-                                <a href="/resume_ujjawal_solanki.pdf" download
-                                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold tracking-widest uppercase transition-all duration-300 flex-1"
-                                    style={{ background: "rgba(255,215,0,0.08)", border: "2px solid rgba(255,215,0,0.7)", color: "#FFD700", textDecoration: "none", fontSize: "11px" }}
-                                    onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 0 30px rgba(255,215,0,0.35)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; }}
-                                >
-                                    <DownloadIcon /> Download Resume
-                                </a>
-                                <a href="resume_ujjawal_solanki.pdf" target="_blank" rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold tracking-widest uppercase transition-all duration-300 flex-1"
-                                    style={{ border: "2px solid rgba(255,215,0,0.3)", color: "rgba(255,215,0,0.8)", textDecoration: "none", fontSize: "11px" }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,215,0,0.06)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.transform = "translateY(0)"; }}
-                                >
-                                    <ExternalIcon /> View Resume
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* SOCIALS — icon + name only, no username/handle */}
-                    <div
-                        className="rounded-2xl p-5 transition-all duration-700"
+            {isMobile ? (
+                /* ── Mobile: plain scrollable layout, no sticky ── */
+                <div className="flex flex-col items-center py-10 px-4">
+                    <h2
+                        className="text-center font-bold tracking-[0.3em] uppercase mb-6"
                         style={{
-                            border: `1px solid ${isPowered(0.50) ? "rgba(255,215,0,0.2)" : "rgba(30,30,30,0.6)"}`,
-                            opacity: isPowered(0.50) ? 1 : 0.2,
-                            transform: isPowered(0.50) ? "translateY(0)" : "translateY(30px)",
-                            transitionDelay: "0.12s"
+                            fontSize: "clamp(1.6rem, 7vw, 2.2rem)",
+                            color: "#FFD700",
+                            textShadow: "0 0 60px rgba(255,215,0,0.5)",
+                            fontFamily: "system-ui, -apple-system, sans-serif",
                         }}
                     >
-                        <SectionLabel icon={<LinkIcon />} text="Find Me Online" />
-                        <div className="grid grid-cols-5 gap-3">
-                            {SOCIALS.map((social, i) => (
-                                <a key={i} href={social.url} target="_blank" rel="noopener noreferrer"
-                                    className="flex flex-col items-center gap-2 py-4 rounded-xl transition-all duration-300"
-                                    style={{
-                                        background: hoveredSocial === i ? "rgba(255,215,0,0.07)" : "transparent",
-                                        border: `1px solid ${hoveredSocial === i ? "rgba(255,215,0,0.45)" : "rgba(255,215,0,0.1)"}`,
-                                        textDecoration: "none",
-                                        transform: hoveredSocial === i ? "translateY(-4px) scale(1.05)" : "none",
-                                        boxShadow: hoveredSocial === i ? "0 8px 24px rgba(255,215,0,0.12)" : "none"
-                                    }}
-                                    onMouseEnter={() => setHoveredSocial(i)}
-                                    onMouseLeave={() => setHoveredSocial(null)}
-                                >
-                                    <span style={{ color: "rgba(255,215,0,0.75)" }}>{social.icon}</span>
-                                    <span style={{ fontSize: "12px", fontWeight: 700, color: "rgba(255,215,0,0.7)" }}>{social.name}</span>
-                                </a>
-                            ))}
-                        </div>
+                        ABOUT ME
+                    </h2>
+                    <div className="w-full max-w-lg flex flex-col gap-4">
+                        {cards}
                     </div>
-
-                    {/* GITHUB CALENDAR — scroll-animated card with heading */}
-                    <div
-                        className="rounded-2xl p-5 transition-all duration-700"
-                        style={{
-                            border: `1px solid ${isPowered(0.75) ? "rgba(255,215,0,0.2)" : "rgba(30,30,30,0.6)"}`,
-                            opacity: isPowered(0.75) ? 1 : 0.1,
-                            transform: isPowered(0.75) ? "translateY(0)" : "translateY(40px)",
-                            transitionDelay: "0.18s"
-                        }}
-                    >
-                        <SectionLabel icon={<CommitIcon />} text="GitHub Commits" />
-                        <div  style={{
-                                    display: "flex",
-                                    justifyContent: "center",
-                                    overflowX: "auto"
-                                }}>
-                            {mounted && (
-                            <GitHubCalendar
-                                username="ujjawal8461"
-                                blockSize={13}
-                                blockMargin={5}
-                                fontSize={14}
-                                colorScheme="dark"
-                                theme={{
-                                    dark: [
-                                        "rgba(70, 69, 69, 0.36)",
-                                        "rgba(255,215,0,0.35)",
-                                        "rgba(255,215,0,0.55)",
-                                        "rgba(255,215,0,0.75)",
-                                        "rgba(255,215,0,1)"
-                                    ]
-                                }}
-                            />
-                            )}
-                        </div>
-                    </div>
-
                 </div>
-            </div>
+            ) : (
+                /* ── Tablet/Desktop: sticky scroll-driven layout ── */
+                <div
+                    className="sticky top-0 h-screen flex flex-col items-center justify-center py-6 px-4 md:px-6"
+                    style={{ zIndex: 2 }}
+                >
+                    <h2
+                        className="text-center font-bold tracking-[0.3em] uppercase mb-4"
+                        style={{
+                            fontSize: "clamp(1.8rem, 4vw, 3rem)",
+                            color: isPowered(0.03) ? "#FFD700" : "#333",
+                            textShadow: isPowered(0.03) ? "0 0 60px rgba(255,215,0,0.5), 0 0 120px rgba(255,215,0,0.2)" : "none",
+                            transition: "all 0.6s ease",
+                            fontFamily: "system-ui, -apple-system, sans-serif",
+                            flexShrink: 0,
+                        }}
+                    >
+                        ABOUT ME
+                    </h2>
+                    <div className="w-full max-w-5xl flex flex-col gap-3 md:gap-4">
+                        {cards}
+                    </div>
+                </div>
+            )}
         </section>
     );
 }

@@ -16,6 +16,7 @@ export default function ProjectsSection() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const [scrollProgress, setScrollProgress] = useState(0);
     const [hoveredId, setHoveredId] = useState<number | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
 
     const projects: Project[] = [
         {
@@ -36,15 +37,6 @@ export default function ProjectsSection() {
             githubUrl: "https://github.com/ujjawal8461/project-management-backend",
             unlockAt: 0.3
         },
-        // {
-        //     id: 3,
-        //     name: "Rock Paper Scissors",
-        //     description: "Classic game with clean UI, score tracking, and smooth interactions.",
-        //     techStack: ["HTML", "CSS", "JavaScript"],
-        //     liveUrl: "https://rock-paper-scissor-8461.vercel.app/",
-        //     githubUrl: "https://github.com/ujjawal8461/Rock-Paper-Scissor.git",
-        //     unlockAt: 0.5
-        // },
         {
             id: 3,
             name: "Portfolio",
@@ -66,9 +58,15 @@ export default function ProjectsSection() {
     ];
 
     useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener("resize", checkMobile);
+        return () => window.removeEventListener("resize", checkMobile);
+    }, []);
+
+    useEffect(() => {
         const section = sectionRef.current;
         if (!section) return;
-
         const handleScroll = () => {
             const rect = section.getBoundingClientRect();
             const windowHeight = window.innerHeight;
@@ -77,27 +75,30 @@ export default function ProjectsSection() {
             const progress = Math.max(0, Math.min(1, scrolledPastTop / sectionScrollHeight));
             setScrollProgress(progress);
         };
-
         handleScroll();
         window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => {
-            window.removeEventListener("scroll", handleScroll);
-        };
+        return () => window.removeEventListener("scroll", handleScroll);
     }, []);
+
+    // On mobile all projects are unlocked immediately
+    const getUnlocked = (unlockAt: number) => isMobile ? true : scrollProgress >= unlockAt;
 
     return (
         <section
             ref={sectionRef}
             className="relative w-full bg-black"
-            style={{ height: "300vh" }}
+            style={{ height: isMobile ? "auto" : "300vh" }}
         >
-            <div className="sticky top-0 h-screen flex flex-col items-center justify-center py-8 px-6">
-
+            <div
+                className={isMobile ? "flex flex-col items-center py-12 px-4" : "sticky top-0 h-screen flex flex-col items-center justify-center py-8 px-4 md:px-6"}
+            >
+                {/* Heading */}
                 <h2
-                    className="text-center text-5xl md:text-6xl font-bold mb-12 tracking-[0.25em] uppercase"
+                    className="text-center font-bold tracking-[0.25em] uppercase mb-6"
                     style={{
-                        color: scrollProgress > 0.05 ? "#FFD700" : "#888",
-                        textShadow: scrollProgress > 0.05 ? "0 0 50px rgba(255,215,0,0.5)" : "none",
+                        fontSize: "clamp(1.8rem, 5vw, 3.5rem)",
+                        color: (isMobile || scrollProgress > 0.05) ? "#FFD700" : "#888",
+                        textShadow: (isMobile || scrollProgress > 0.05) ? "0 0 50px rgba(255,215,0,0.5)" : "none",
                         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
                         fontFamily: "system-ui, -apple-system, sans-serif"
                     }}
@@ -105,107 +106,73 @@ export default function ProjectsSection() {
                     PROJECTS
                 </h2>
 
-                <div
-                    style={{
-                        width: "100%",
-                        maxWidth: "720px",
-                        marginBottom: "2.5rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "1rem"
-                    }}
-                >
-                    <span
-                        style={{
-                            color: "#3a3a3a",
-                            fontSize: "10px",
-                            letterSpacing: "0.2em",
-                            fontFamily: "var(--font-space-grotesk)",
-                            whiteSpace: "nowrap"
-                        }}
-                    >
-                        CHARGE
-                    </span>
+                {/* Charge bar — hidden on mobile */}
+                {!isMobile && (
                     <div
                         style={{
-                            flex: 1,
-                            position: "relative",
-                            height: "2px",
-                            background: "rgba(255,255,255,0.06)",
-                            borderRadius: "999px"
+                            width: "100%",
+                            maxWidth: "720px",
+                            marginBottom: "2rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "1rem"
                         }}
                     >
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                bottom: 0,
-                                width: Math.round(scrollProgress * 100) + "%",
-                                background: "linear-gradient(90deg, #FFD700, #FFF7A0)",
-                                boxShadow: "0 0 10px rgba(255,215,0,0.6)",
-                                borderRadius: "999px",
-                                transition: "width 0.15s ease"
-                            }}
-                        />
-                        {scrollProgress > 0 && scrollProgress < 1 && (
+                        <span style={{ color: "#3a3a3a", fontSize: "10px", letterSpacing: "0.2em", fontFamily: "var(--font-space-grotesk)", whiteSpace: "nowrap" }}>
+                            CHARGE
+                        </span>
+                        <div style={{ flex: 1, position: "relative", height: "2px", background: "rgba(255,255,255,0.06)", borderRadius: "999px" }}>
                             <div
                                 style={{
-                                    position: "absolute",
-                                    left: Math.round(scrollProgress * 100) + "%",
-                                    top: "50%",
-                                    width: "8px",
-                                    height: "8px",
-                                    borderRadius: "50%",
-                                    background: "#FFF",
-                                    boxShadow: "0 0 10px rgba(255,215,0,1)",
-                                    transform: "translate(-50%, -50%)"
+                                    position: "absolute", top: 0, left: 0, bottom: 0,
+                                    width: Math.round(scrollProgress * 100) + "%",
+                                    background: "linear-gradient(90deg, #FFD700, #FFF7A0)",
+                                    boxShadow: "0 0 10px rgba(255,215,0,0.6)",
+                                    borderRadius: "999px",
+                                    transition: "width 0.15s ease"
                                 }}
                             />
-                        )}
+                            {scrollProgress > 0 && scrollProgress < 1 && (
+                                <div
+                                    style={{
+                                        position: "absolute",
+                                        left: Math.round(scrollProgress * 100) + "%",
+                                        top: "50%",
+                                        width: "8px", height: "8px",
+                                        borderRadius: "50%",
+                                        background: "#FFF",
+                                        boxShadow: "0 0 10px rgba(255,215,0,1)",
+                                        transform: "translate(-50%, -50%)"
+                                    }}
+                                />
+                            )}
+                        </div>
+                        <span style={{ color: "#444", fontSize: "10px", letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono)", whiteSpace: "nowrap" }}>
+                            {Math.round(scrollProgress * 100)}%
+                        </span>
                     </div>
-                    <span
-                        style={{
-                            color: "#444",
-                            fontSize: "10px",
-                            letterSpacing: "0.15em",
-                            fontFamily: "var(--font-geist-mono)",
-                            whiteSpace: "nowrap"
-                        }}
-                    >
-                        {Math.round(scrollProgress * 100)}%
-                    </span>
-                </div>
+                )}
 
+                {/* Project list */}
                 <div style={{ width: "100%", maxWidth: "720px", display: "flex", flexDirection: "column" }}>
                     {projects.map((project, idx) => {
-                        const isUnlocked = scrollProgress >= project.unlockAt;
+                        const isUnlocked = getUnlocked(project.unlockAt);
                         const isHovered = hoveredId === project.id;
 
-                        let borderColor = "#1e1e1e";
-                        if (isUnlocked && isHovered) {
-                            borderColor = "#FFD700";
-                        } else if (isUnlocked) {
-                            borderColor = "rgba(255,215,0,0.22)";
-                        }
+                        // ── New hover: glow on left border + soft background tint, NO translateX ──
+                        const leftBorderColor = !isUnlocked
+                            ? "#1e1e1e"
+                            : isHovered
+                                ? "#FFD700"
+                                : "rgba(255,215,0,0.25)";
 
-                        const dotBg = isUnlocked ? "#FFD700" : "#2a2a2a";
-                        const dotShadow = isUnlocked ? "0 0 8px rgba(255,215,0,0.9)" : "none";
-                        const titleColor = isUnlocked ? (isHovered ? "#FFD700" : "rgba(255,215,0,0.88)") : "#444";
-                        const titleShadow = isUnlocked && isHovered ? "0 0 18px rgba(255,215,0,0.4)" : "none";
-                        const descColor = isUnlocked ? "rgba(150,150,150,0.9)" : "#333";
-                        const tagBg = isUnlocked ? "rgba(255,215,0,0.07)" : "rgba(255,255,255,0.02)";
-                        const tagColor = isUnlocked ? "rgba(255,215,0,0.6)" : "#2e2e2e";
-                        const tagBorder = isUnlocked ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.04)";
-                        const githubColor = isUnlocked ? "rgba(255,215,0,0.7)" : "#333";
-                        const githubBorder = isUnlocked ? "rgba(255,215,0,0.22)" : "rgba(255,255,255,0.05)";
-                        const liveColor = isUnlocked ? "#FFD700" : "#333";
-                        const liveBg = isUnlocked ? "rgba(255,215,0,0.09)" : "transparent";
-                        const liveBorder = isUnlocked ? "rgba(255,215,0,0.32)" : "rgba(255,255,255,0.05)";
-                        const liveOpacity = project.liveUrl !== null ? 1 : 0.38;
-                        const rowOpacity = isUnlocked ? 1 : 0.18;
-                        const rowTransform = isUnlocked && isHovered ? "translateX(4px)" : "translateX(0)";
-                        const ptrEvents: "auto" | "none" = isUnlocked ? "auto" : "none";
+                        const rowBg = isHovered && isUnlocked
+                            ? "rgba(255,215,0,0.03)"
+                            : "transparent";
+
+                        const leftBorderShadow = isHovered && isUnlocked
+                            ? "inset 3px 0 20px rgba(255,215,0,0.25)"
+                            : "none";
 
                         return (
                             <div
@@ -213,12 +180,14 @@ export default function ProjectsSection() {
                                 onMouseEnter={() => setHoveredId(project.id)}
                                 onMouseLeave={() => setHoveredId(null)}
                                 style={{
-                                    opacity: rowOpacity,
-                                    transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1) " + idx * 0.04 + "s",
-                                    borderBottom: "1px solid rgba(255,255,255,0.045)",
-                                    borderLeft: "2px solid " + borderColor,
-                                    padding: "16px 0 16px 22px",
-                                    transform: rowTransform
+                                    opacity: isUnlocked ? 1 : 0.18,
+                                    transition: `all 0.45s cubic-bezier(0.4,0,0.2,1) ${idx * 0.04}s`,
+                                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                                    borderLeft: `2px solid ${leftBorderColor}`,
+                                    padding: isMobile ? "14px 0 14px 16px" : "18px 0 18px 24px",
+                                    background: rowBg,
+                                    boxShadow: leftBorderShadow,
+                                    // NO transform — keeps alignment stable
                                 }}
                             >
                                 <div
@@ -226,33 +195,33 @@ export default function ProjectsSection() {
                                         display: "flex",
                                         alignItems: "flex-start",
                                         justifyContent: "space-between",
-                                        gap: "1.5rem",
-                                        flexWrap: "wrap"
+                                        gap: "1rem",
                                     }}
                                 >
+                                    {/* Left: title + desc + tags */}
                                     <div style={{ flex: 1, minWidth: 0 }}>
+                                        {/* Title row with dot */}
                                         <div style={{ display: "flex", alignItems: "center", marginBottom: "6px" }}>
                                             <div
                                                 style={{
-                                                    width: "7px",
-                                                    height: "7px",
+                                                    width: "6px", height: "6px",
                                                     borderRadius: "50%",
                                                     flexShrink: 0,
-                                                    background: dotBg,
-                                                    boxShadow: dotShadow,
+                                                    background: isUnlocked ? "#FFD700" : "#2a2a2a",
+                                                    boxShadow: isUnlocked ? "0 0 6px rgba(255,215,0,0.9)" : "none",
                                                     transition: "all 0.4s ease",
-                                                    marginLeft: "-26px",
-                                                    marginRight: "16px"
+                                                    marginLeft: isMobile ? "-20px" : "-28px",
+                                                    marginRight: "14px"
                                                 }}
                                             />
                                             <h3
                                                 style={{
-                                                    fontSize: "clamp(0.88rem, 1.35vw, 1.05rem)",
+                                                    fontSize: "clamp(0.85rem, 1.4vw, 1rem)",
                                                     fontWeight: 700,
-                                                    letterSpacing: "0.07em",
-                                                    color: titleColor,
-                                                    textShadow: titleShadow,
-                                                    transition: "all 0.3s ease",
+                                                    letterSpacing: "0.06em",
+                                                    color: isUnlocked ? "rgba(255,215,0,0.9)" : "#444",
+                                                    // Hover: white text instead of glow text-shadow (cleaner)
+                                                    transition: "color 0.25s ease",
                                                     fontFamily: "system-ui, -apple-system, sans-serif",
                                                     margin: 0
                                                 }}
@@ -263,13 +232,12 @@ export default function ProjectsSection() {
 
                                         <p
                                             style={{
-                                                fontSize: "0.77rem",
-                                                color: descColor,
+                                                fontSize: "clamp(0.72rem, 1.1vw, 0.78rem)",
+                                                color: isUnlocked ? "rgba(160,160,160,0.9)" : "#333",
                                                 lineHeight: 1.65,
                                                 margin: "0 0 10px 0",
-                                                transition: "all 0.3s ease",
+                                                transition: "color 0.3s ease",
                                                 fontFamily: "system-ui, -apple-system, sans-serif",
-                                                maxWidth: "480px"
                                             }}
                                         >
                                             {project.description}
@@ -281,14 +249,15 @@ export default function ProjectsSection() {
                                                     key={i}
                                                     style={{
                                                         fontSize: "0.6rem",
-                                                        letterSpacing: "0.14em",
+                                                        letterSpacing: "0.12em",
                                                         textTransform: "uppercase",
                                                         padding: "2px 7px",
-                                                        borderRadius: "2px",
-                                                        background: tagBg,
-                                                        color: tagColor,
-                                                        border: "1px solid " + tagBorder,
-                                                        fontFamily: "var(--font-geist-mono)"
+                                                        borderRadius: "3px",
+                                                        background: isUnlocked ? "rgba(255,215,0,0.06)" : "rgba(255,255,255,0.02)",
+                                                        color: isUnlocked ? "rgba(255,215,0,0.65)" : "#2e2e2e",
+                                                        border: `1px solid ${isUnlocked ? "rgba(255,215,0,0.18)" : "rgba(255,255,255,0.04)"}`,
+                                                        fontFamily: "var(--font-geist-mono)",
+                                                        transition: "all 0.3s ease"
                                                     }}
                                                 >
                                                     {tech}
@@ -297,13 +266,15 @@ export default function ProjectsSection() {
                                         </div>
                                     </div>
 
+                                    {/* Right: buttons — row on desktop, stacked on mobile */}
                                     <div
                                         style={{
                                             display: "flex",
-                                            flexDirection: "column",
-                                            gap: "7px",
+                                            flexDirection: isMobile ? "row" : "column",
+                                            gap: "6px",
                                             flexShrink: 0,
-                                            paddingTop: "2px"
+                                            alignSelf: isMobile ? "flex-end" : "flex-start",
+                                            paddingTop: isMobile ? "0" : "2px"
                                         }}
                                     >
                                         <a
@@ -311,51 +282,69 @@ export default function ProjectsSection() {
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             style={{
-                                                fontSize: "0.67rem",
-                                                letterSpacing: "0.14em",
+                                                fontSize: "0.62rem",
+                                                letterSpacing: "0.12em",
                                                 fontWeight: 600,
-                                                padding: "5px 14px",
-                                                borderRadius: "2px",
+                                                padding: "5px 12px",
+                                                borderRadius: "4px",
                                                 background: "transparent",
-                                                color: githubColor,
-                                                border: "1px solid " + githubBorder,
+                                                color: isUnlocked ? "rgba(255,215,0,0.75)" : "#333",
+                                                border: `1px solid ${isUnlocked ? "rgba(255,215,0,0.25)" : "rgba(255,255,255,0.05)"}`,
                                                 textDecoration: "none",
-                                                pointerEvents: ptrEvents,
-                                                transition: "all 0.25s ease",
+                                                pointerEvents: isUnlocked ? "auto" : "none",
+                                                transition: "all 0.2s ease",
                                                 fontFamily: "system-ui, -apple-system, sans-serif",
                                                 display: "block",
                                                 textAlign: "center",
                                                 whiteSpace: "nowrap"
                                             }}
+                                            onMouseEnter={e => {
+                                                if (isUnlocked) {
+                                                    e.currentTarget.style.background = "rgba(255,215,0,0.08)";
+                                                    e.currentTarget.style.borderColor = "rgba(255,215,0,0.5)";
+                                                    e.currentTarget.style.color = "#FFD700";
+                                                }
+                                            }}
+                                            onMouseLeave={e => {
+                                                e.currentTarget.style.background = "transparent";
+                                                e.currentTarget.style.borderColor = isUnlocked ? "rgba(255,215,0,0.25)" : "rgba(255,255,255,0.05)";
+                                                e.currentTarget.style.color = isUnlocked ? "rgba(255,215,0,0.75)" : "#333";
+                                            }}
                                         >
                                             GitHub
                                         </a>
                                         <a
-                                            href={project.liveUrl !== null ? project.liveUrl : "#"}
-                                            target={project.liveUrl !== null ? "_blank" : "_self"}
+                                            href={project.liveUrl ?? "#"}
+                                            target={project.liveUrl ? "_blank" : "_self"}
                                             rel="noopener noreferrer"
-                                            onClick={(e) => {
-                                                if (project.liveUrl === null) {
-                                                    e.preventDefault();
-                                                }
-                                            }}
+                                            onClick={e => { if (!project.liveUrl) e.preventDefault(); }}
                                             style={{
-                                                fontSize: "0.67rem",
-                                                letterSpacing: "0.14em",
+                                                fontSize: "0.62rem",
+                                                letterSpacing: "0.12em",
                                                 fontWeight: 600,
-                                                padding: "5px 14px",
-                                                borderRadius: "2px",
-                                                background: liveBg,
-                                                color: liveColor,
-                                                border: "1px solid " + liveBorder,
+                                                padding: "5px 12px",
+                                                borderRadius: "4px",
+                                                background: isUnlocked ? "rgba(255,215,0,0.08)" : "transparent",
+                                                color: isUnlocked ? "#FFD700" : "#333",
+                                                border: `1px solid ${isUnlocked ? "rgba(255,215,0,0.35)" : "rgba(255,255,255,0.05)"}`,
                                                 textDecoration: "none",
-                                                pointerEvents: ptrEvents,
-                                                transition: "all 0.25s ease",
+                                                pointerEvents: isUnlocked ? "auto" : "none",
+                                                transition: "all 0.2s ease",
                                                 fontFamily: "system-ui, -apple-system, sans-serif",
                                                 display: "block",
                                                 textAlign: "center",
                                                 whiteSpace: "nowrap",
-                                                opacity: liveOpacity
+                                                opacity: project.liveUrl ? 1 : 0.35
+                                            }}
+                                            onMouseEnter={e => {
+                                                if (isUnlocked && project.liveUrl) {
+                                                    e.currentTarget.style.background = "rgba(255,215,0,0.15)";
+                                                    e.currentTarget.style.boxShadow = "0 0 14px rgba(255,215,0,0.25)";
+                                                }
+                                            }}
+                                            onMouseLeave={e => {
+                                                e.currentTarget.style.background = isUnlocked ? "rgba(255,215,0,0.08)" : "transparent";
+                                                e.currentTarget.style.boxShadow = "none";
                                             }}
                                         >
                                             Live
@@ -367,18 +356,21 @@ export default function ProjectsSection() {
                     })}
                 </div>
 
-                <p
-                    style={{
-                        marginTop: "28px",
-                        fontSize: "0.58rem",
-                        letterSpacing: "0.32em",
-                        color: "#272727",
-                        textTransform: "uppercase",
-                        fontFamily: "system-ui, -apple-system, sans-serif"
-                    }}
-                >
-                    scroll to unlock
-                </p>
+                {/* Scroll hint — only on desktop */}
+                {!isMobile && (
+                    <p
+                        style={{
+                            marginTop: "24px",
+                            fontSize: "0.58rem",
+                            letterSpacing: "0.32em",
+                            color: "#272727",
+                            textTransform: "uppercase",
+                            fontFamily: "system-ui, -apple-system, sans-serif"
+                        }}
+                    >
+                        scroll to unlock
+                    </p>
+                )}
             </div>
         </section>
     );
