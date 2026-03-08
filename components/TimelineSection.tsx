@@ -64,35 +64,39 @@ export default function CircuitTimeline() {
         }
     ];
 
+    // Padding so glow never clips at any edge
+    const PAD_X = 160;
+    const PAD_Y = 120;
+    const mapX = (x: number) => PAD_X + x * (canvasSize.width - PAD_X * 2);
+    const mapY = (y: number) => PAD_Y + y * (canvasSize.height - PAD_Y * 2);
+
     const createCircuitPath = () => {
         const points: { x: number; y: number }[] = [];
-        const w = canvasSize.width;
-        const h = canvasSize.height;
 
-        const m1 = { x: milestones[0].x * w, y: milestones[0].y * h };
+        const m1 = { x: mapX(milestones[0].x), y: mapY(milestones[0].y) };
         points.push(m1);
-        points.push({ x: m1.x, y: milestones[1].y * h });
+        points.push({ x: m1.x, y: mapY(milestones[1].y) });
 
-        const m2 = { x: milestones[1].x * w, y: milestones[1].y * h };
+        const m2 = { x: mapX(milestones[1].x), y: mapY(milestones[1].y) };
         points.push(m2);
-        points.push({ x: m2.x, y: milestones[2].y * h });
+        points.push({ x: m2.x, y: mapY(milestones[2].y) });
 
-        const m3 = { x: milestones[2].x * w, y: milestones[2].y * h };
+        const m3 = { x: mapX(milestones[2].x), y: mapY(milestones[2].y) };
         points.push(m3);
 
-        const m4Y = milestones[3].y * h;
+        const m4Y = mapY(milestones[3].y);
         points.push({ x: m3.x, y: m4Y });
-        const m4 = { x: milestones[3].x * w, y: m4Y };
+        const m4 = { x: mapX(milestones[3].x), y: m4Y };
         points.push(m4);
 
-        const m5Y = milestones[4].y * h;
+        const m5Y = mapY(milestones[4].y);
         points.push({ x: m4.x, y: m5Y });
-        const m5 = { x: milestones[4].x * w, y: m5Y };
+        const m5 = { x: mapX(milestones[4].x), y: m5Y };
         points.push(m5);
 
-        const m6Y = milestones[5].y * h;
+        const m6Y = mapY(milestones[5].y);
         points.push({ x: m5.x, y: m6Y });
-        const m6 = { x: milestones[5].x * w, y: m6Y };
+        const m6 = { x: mapX(milestones[5].x), y: m6Y };
         points.push(m6);
 
         return points;
@@ -115,8 +119,8 @@ export default function CircuitTimeline() {
 
         const milestonePositions: number[] = [];
         for (let m = 0; m < milestones.length; m++) {
-            const mx = milestones[m].x * canvasSize.width;
-            const my = milestones[m].y * canvasSize.height;
+            const mx = mapX(milestones[m].x);
+            const my = mapY(milestones[m].y);
 
             let accLength = 0;
             for (let i = 0; i < pathPoints.length; i++) {
@@ -170,8 +174,8 @@ export default function CircuitTimeline() {
         const dpr = window.devicePixelRatio || 1;
 
         const resizeCanvas = () => {
-            const width = Math.min(window.innerWidth * 0.9, 1400);
-            const height = Math.min(window.innerHeight * 0.8, 1000);
+            const width = window.innerWidth;
+            const height = window.innerHeight;
 
             setCanvasSize({ width, height });
 
@@ -472,8 +476,10 @@ export default function CircuitTimeline() {
 
             // Draw nodes with bulb-like glow
             milestones.forEach((milestone, index) => {
-                const x = milestone.x * canvasSize.width;
-                const y = milestone.y * canvasSize.height;
+                const PAD_X = 160;
+                const PAD_Y = 120;
+                const x = PAD_X + milestone.x * (canvasSize.width - PAD_X * 2);
+                const y = PAD_Y + milestone.y * (canvasSize.height - PAD_Y * 2);
 
                 let milestoneReached = false;
                 let milestoneLength = 0;
@@ -609,33 +615,43 @@ export default function CircuitTimeline() {
             className="relative w-full bg-black"
             style={{ height: "300vh" }}
         >
-            <div className="sticky top-0 h-screen overflow-hidden flex flex-col items-center justify-center py-8">
-                <h2
-                    className="text-center text-5xl md:text-6xl font-bold mb-12 tracking-[0.25em] uppercase"
-                    style={{
-                        color: scrollProgress > 0.05 ? "#FFD700" : "#888",
-                        textShadow: scrollProgress > 0.05 ? "0 0 50px rgba(255,215,0,0.5)" : "none",
-                        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                        fontFamily: "system-ui, -apple-system, sans-serif"
-                    }}
-                >
-                    TIME LINE CIRCUIT
-                </h2>
+            <div className="sticky top-0 h-screen" style={{ position: "sticky" }}>
 
-                <div className="relative flex justify-center items-center flex-1 w-full">
-                    <div className="relative">
-                        <canvas ref={canvasRef} />
+                {/* Canvas absolutely fills full screen so glow never clips */}
+                <div className="absolute inset-0 flex justify-center items-center" style={{ zIndex: 1 }}>
+                    <canvas ref={canvasRef} />
+                </div>
 
+                {/* Heading fixed at top with z-index above canvas */}
+                <div className="absolute top-0 left-0 right-0 flex justify-center pt-8" style={{ zIndex: 10 }}>
+                    <h2
+                        className="text-center text-5xl md:text-6xl font-bold tracking-[0.25em] uppercase"
+                        style={{
+                            color: scrollProgress > 0.05 ? "#FFD700" : "#888",
+                            textShadow: scrollProgress > 0.05 ? "0 0 50px rgba(255,215,0,0.5)" : "none",
+                            transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                            fontFamily: "system-ui, -apple-system, sans-serif"
+                        }}
+                    >
+                        TIME LINE CIRCUIT
+                    </h2>
+                </div>
+
+                {/* Milestone labels absolutely positioned over canvas */}
+                <div className="absolute inset-0 flex justify-center items-center" style={{ zIndex: 5 }}>
+                    <div className="relative" style={{ width: canvasSize.width, height: canvasSize.height }}>
                         {milestones.map((milestone, index) => {
                             const isActive = isMilestoneActive(index);
                             const intensity = isActive ? 1 : 0;
 
-                            let textLeft = milestone.x * canvasSize.width;
+                            const nodeX = PAD_X + milestone.x * (canvasSize.width - PAD_X * 2);
+                            const nodeY = PAD_Y + milestone.y * (canvasSize.height - PAD_Y * 2);
 
+                            let textLeft = nodeX;
                             if (milestone.x < 0.4) {
-                                textLeft = textLeft - 260;
+                                textLeft = nodeX - 180;
                             } else {
-                                textLeft = textLeft + 50;
+                                textLeft = nodeX + 50;
                             }
 
                             return (
@@ -644,8 +660,7 @@ export default function CircuitTimeline() {
                                     className="absolute pointer-events-none"
                                     style={{
                                         left: `${textLeft}px`,
-                                        top: `${milestone.y * canvasSize.height - 25}px`,
-                                        // opacity: isActive ? 1 : 0.3,
+                                        top: `${nodeY - 25}px`,
                                         transition: "opacity 0.4s ease",
                                         width: "240px"
                                     }}
@@ -700,17 +715,6 @@ export default function CircuitTimeline() {
                     </div>
                 </div>
 
-                <div
-                    className="text-center text-xs tracking-[0.35em] uppercase mt-6"
-                    style={{
-                        color: scrollProgress < 0.95 ? "#555" : "#222",
-                        //opacity: scrollProgress < 0.95 ? 0.7 : 0,
-                        transition: "all 0.5s ease",
-                        fontFamily: "system-ui, -apple-system, sans-serif"
-                    }}
-                >
-                    {/* Scroll to energize • Click switches to control circuit */}
-                </div>
             </div>
         </section>
     );
