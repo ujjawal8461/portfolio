@@ -508,18 +508,20 @@ export default function HeroSection() {
 
             // Draw bulb glow
             if (lightIntensity > 0.5) {
-                const glowRadius = params.bulbRadius * 6;
-                const gradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, glowRadius);
-                gradient.addColorStop(0, `rgba(255, 240, 150, ${lightIntensity * 0.4})`);
-                gradient.addColorStop(0.2, `rgba(255, 220, 120, ${lightIntensity * 0.3})`);
-                gradient.addColorStop(0.5, `rgba(255, 200, 100, ${lightIntensity * 0.2})`);
-                gradient.addColorStop(0.8, `rgba(255, 180, 80, ${lightIntensity * 0.1})`);
-                gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
+                const glowRadius = params.bulbRadius * 8; // Increased the radius for a softer spread
+                const gradient = ctx.createRadialGradient(bulbX, bulbY, params.bulbRadius * 0.5, bulbX, bulbY, glowRadius);
+                gradient.addColorStop(0, `rgba(255, 250, 200, ${lightIntensity * 0.6})`); // Stronger core glow
+                gradient.addColorStop(0.2, `rgba(255, 230, 150, ${lightIntensity * 0.3})`); // Smooth transition
+                gradient.addColorStop(0.5, `rgba(255, 200, 100, ${lightIntensity * 0.1})`);
+                gradient.addColorStop(1, `rgba(255, 180, 50, 0)`); // Fades out completely
 
+                ctx.save();
+                ctx.globalCompositeOperation = "screen";
                 ctx.beginPath();
                 ctx.arc(bulbX, bulbY, glowRadius, 0, Math.PI * 2);
                 ctx.fillStyle = gradient;
                 ctx.fill();
+                ctx.restore();
             }
 
             // Draw bulb
@@ -527,9 +529,9 @@ export default function HeroSection() {
             ctx.arc(bulbX, bulbY, params.bulbRadius, 0, Math.PI * 2);
             const bulbGradient = ctx.createRadialGradient(bulbX, bulbY, 0, bulbX, bulbY, params.bulbRadius);
             if (lightIntensity > 0.5) {
-                bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${lightIntensity * 1.0})`);
-                bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${lightIntensity * 0.8})`);
-                bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${lightIntensity * 0.6})`);
+                bulbGradient.addColorStop(0, `rgba(255, 255, 230, ${lightIntensity * 0.95})`);
+                bulbGradient.addColorStop(0.5, `rgba(255, 225, 0, ${lightIntensity * 0.7})`);
+                bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${lightIntensity * 0.4})`);
             } else {
                 bulbGradient.addColorStop(0, `rgba(200, 200, 200, 0.3)`);
                 bulbGradient.addColorStop(0.7, `rgba(150, 150, 150, 0.4)`);
@@ -631,7 +633,7 @@ export default function HeroSection() {
         };
     }, [showSwitchHint]);
 
-    const subTextContent = "Hi, I've been building full-stack web products, working across frontend and backend to design complete systems. I focus on transforming complex requirements into structured, scalable architecture building applications that feel effortless for users but are carefully engineered behind the scenes to know more about me scroll down.";
+    const subTextContent = "Hi, I'm Ujjawal, a Software Engineer who enjoys solving complex problems with bright ideas just like my name. To know more about me scroll down.";
 
     return (
         <section className="relative w-full h-screen bg-black flex flex-col items-center justify-center overflow-hidden">
