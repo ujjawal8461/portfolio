@@ -12,6 +12,7 @@ export default function HeroSection() {
     const [showSwitchHint, setShowSwitchHint] = useState<boolean>(true);
     const [ropePositions, setRopePositions] = useState({ bulbX: '50%', switchX: '50%' });
     const [isMobile, setIsMobile] = useState(false);
+    const [isTablet, setIsTablet] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -22,12 +23,13 @@ export default function HeroSection() {
     }, []);
 
     useEffect(() => {
-        const checkMobile = () => {
+        const checkSize = () => {
             setIsMobile(window.innerWidth < 768);
+            setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
         };
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
+        checkSize();
+        window.addEventListener('resize', checkSize);
+        return () => window.removeEventListener('resize', checkSize);
     }, []);
 
     //     useEffect(() => {
@@ -659,19 +661,20 @@ export default function HeroSection() {
 
             {showSwitchHint && !isLightOn && (
                 <div
-                    className="fixed z-20 animate-fade-in pointer-events-none px-4"
+                    className="fixed z-20 pointer-events-none fade-in-out font-medium uppercase tracking-[0.15em]"
                     style={{
                         left: ropePositions.switchX,
-                        top: isMobile ? '20%' : '25%',
-                        transform: 'translateX(-50%)',
-                        transformOrigin: 'center center',
-                        whiteSpace: 'nowrap',
-                        maxWidth: '90vw'
+                        // Mobile: 150px, Tablet: 175px, Desktop: 200px based on exact switchNaturalLength values
+                        top: isMobile ? '150px' : isTablet ? '175px' : '200px',
+                        transform: 'translate(40px, -50%)',
                     }}
                 >
-                    <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium tracking-wide pulse-glow text-center" style={{ fontFamily: 'var(--font-space-grotesk)', willChange: 'text-shadow, opacity' }}>
-                        {"Drag the button to make the bulb glow"}
-                    </p>
+                    <div className="flex items-center gap-3">
+                        <div className="w-6 sm:w-8 h-[1px] bg-gray-500 rounded-full shrink-0" style={{ boxShadow: '0 0 8px rgba(255,255,255,0.2)' }}></div>
+                        <div className="text-[10px] sm:text-xs text-gray-300 text-left leading-relaxed animate-pulse" style={{ fontFamily: 'var(--font-space-grotesk)', textShadow: '0 2px 14px rgba(0,0,0,0.9)' }}>
+                            Drag switch<br />to turn on
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -765,29 +768,6 @@ export default function HeroSection() {
 
                 .animate-fade-in {
                     animation: fade-in 600ms cubic-bezier(.2,.8,.2,1) both;
-                }
-
-                @keyframes pulse-glow-frames {
-                    0% {
-                        opacity: 1;
-                        text-shadow: 0 0 0 rgba(255,215,0,0);
-                        color: rgba(128,128,128,0.95);
-                    }
-                    50% {
-                        opacity: 1;
-                        text-shadow: 0 0 8px rgba(255,215,0,0.9), 0 0 20px rgba(255,200,0,0.55);
-                        color: rgba(255,215,0,0.95);
-                    }
-                    100% {
-                        opacity: 1;
-                        text-shadow: 0 0 0 rgba(255,215,0,0);
-                        color: rgba(128,128,128,0.95);
-                    }
-                }
-
-                .pulse-glow {
-                    animation: pulse-glow-frames 2200ms ease-in-out infinite;
-                    will-change: text-shadow, color, opacity;
                 }
             `}</style>
         </section>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-type Point = { x: number; y: number; age: number };
+type Point = { x: number; y: number };
 
 export default function CustomCursor() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,32 +29,12 @@ export default function CustomCursor() {
 
         window.addEventListener("resize", resize);
 
-        let points: Point[] = [];
-        const maxAge = 12; // Much shorter tail so it doesn't look huge when moving fast
+        let points: Point[] = Array.from({ length: 15 }, () => ({ x: -100, y: -100 }));
 
-        let lastMouse = { x: -1, y: -1 };
+        let mouse = { x: -100, y: -100 };
 
         const onMouseMove = (e: MouseEvent) => {
-            const currentMouse = { x: e.clientX, y: e.clientY };
-
-            if (lastMouse.x !== -1 && lastMouse.y !== -1) {
-                const dx = currentMouse.x - lastMouse.x;
-                const dy = currentMouse.y - lastMouse.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                // Add interpolated points so the snake tail remains continuous even if mouse is moved very fast
-                const steps = Math.max(1, Math.floor(distance / 5));
-                for (let i = 0; i < steps; i++) {
-                    points.push({
-                        x: lastMouse.x + dx * (i / steps),
-                        y: lastMouse.y + dy * (i / steps),
-                        age: 0,
-                    });
-                }
-            }
-
-            points.push({ x: currentMouse.x, y: currentMouse.y, age: 0 });
-            lastMouse = currentMouse;
+            mouse = { x: e.clientX, y: e.clientY };
         };
 
         window.addEventListener("mousemove", onMouseMove);
@@ -64,7 +44,27 @@ export default function CustomCursor() {
         const render = () => {
             ctx.clearRect(0, 0, width, height);
 
-            if (points.length > 1) {
+            if (mouse.x !== -100) {
+                // Initialize points if first time to prevent lines from off-screen
+                if (points[0].x === -100) {
+                    for (let i = 0; i < points.length; i++) {
+                        points[i] = { x: mouse.x, y: mouse.y };
+                    }
+                }
+
+                // Head follows mouse smoothly
+                points[0].x += (mouse.x - points[0].x) * 0.5;
+                points[0].y += (mouse.y - points[0].y) * 0.5;
+
+                // Rest follows the previous point
+                for (let i = 1; i < points.length; i++) {
+                    const damping = 0.5; // Controls the "curviness" and stretch
+                    points[i].x += (points[i - 1].x - points[i].x) * damping;
+                    points[i].y += (points[i - 1].y - points[i].y) * damping;
+                }
+            }
+
+            if (points[0].x !== -100) {
                 ctx.beginPath();
                 ctx.moveTo(points[0].x, points[0].y);
                 for (let i = 1; i < points.length - 1; i++) {
@@ -72,7 +72,6 @@ export default function CustomCursor() {
                     const yc = (points[i].y + points[i + 1].y) / 2;
                     ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
                 }
-                // Connect the last point
                 ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
 
                 ctx.lineCap = "round";
@@ -80,17 +79,6 @@ export default function CustomCursor() {
                 ctx.lineWidth = 1.5; // Very thin
                 ctx.strokeStyle = "rgba(255, 215, 0, 0.6)"; // Subtle golden color
                 ctx.stroke();
-            }
-
-            // Age points and remove old ones
-            for (let i = 0; i < points.length; i++) {
-                points[i].age++;
-            }
-            points = points.filter(p => p.age < maxAge);
-
-            // Taper effect: slowly pull the oldest points towards the newer ones to shorten the tail smoothly
-            if (points.length > 2) {
-                points.shift();
             }
 
             animationFrameId = requestAnimationFrame(render);

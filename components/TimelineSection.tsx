@@ -785,7 +785,13 @@ export default function CircuitTimeline() {
                                         width: `${labelW}px`,
                                     }}
                                 >
-                                    <div className="flex flex-col">
+                                    <div
+                                        className="flex flex-col"
+                                        style={{
+                                            alignItems: isMobile ? "center" : (milestone.x < 0.4 ? "flex-end" : "flex-start"),
+                                            textAlign: isMobile ? "center" : (milestone.x < 0.4 ? "right" : "left")
+                                        }}
+                                    >
                                         <span
                                             style={{
                                                 fontSize: yearSize,

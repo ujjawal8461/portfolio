@@ -402,7 +402,7 @@ export default function SkillsSection() {
                                 fontWeight: 500,
                             }}
                         >
-                            Hover a pill to explore · Click to lock
+                            Hover a buttons to explore · Click to lock
                         </p>
                     </div>
                 )}
