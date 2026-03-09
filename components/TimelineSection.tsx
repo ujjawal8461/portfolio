@@ -7,6 +7,7 @@ export default function CircuitTimeline() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [scrollProgress, setScrollProgress] = useState(0);
     const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 900 });
+    const [isMobile, setIsMobile] = useState(false);
 
     // Track switch states manually
     const switchStatesRef = useRef<boolean[]>([true, true, true, true, true]);
@@ -64,47 +65,84 @@ export default function CircuitTimeline() {
         }
     ];
 
-    // Padding so glow never clips at any edge
-    const PAD_X = 160;
-    const PAD_Y = 120;
+    // Padding scales with screen so circuit never clips on any device
+    const getPad = (w: number, h: number) => ({
+        x: w < 640 ? Math.max(30, w * 0.08) : Math.max(80, w * 0.1),
+        y: h < 700 ? Math.max(30, h * 0.08) : Math.max(60, h * 0.1),
+    });
 
     // computeMapX/Y: explicit w/h required — used everywhere inside effect to avoid stale state
-    const computeMapX = (x: number, w: number) => PAD_X + x * (w - PAD_X * 2);
-    const computeMapY = (y: number, h: number) => PAD_Y + y * (h - PAD_Y * 2);
+    const computeMapX = (x: number, w: number) => {
+        const pad = getPad(w, 0);
+        return pad.x + x * (w - pad.x * 2);
+    };
+    const computeMapY = (y: number, h: number) => {
+        const pad = getPad(0, h);
+        return pad.y + y * (h - pad.y * 2);
+    };
 
     // mapX/mapY: uses canvasSize state — only used in React render (JSX), never inside useEffect
-    const mapX = (x: number) => PAD_X + x * (canvasSize.width - PAD_X * 2);
-    const mapY = (y: number) => PAD_Y + y * (canvasSize.height - PAD_Y * 2);
+    const mapX = (x: number) => {
+        const pad = getPad(canvasSize.width, canvasSize.height);
+        return pad.x + x * (canvasSize.width - pad.x * 2);
+    };
+    const mapY = (y: number) => {
+        const pad = getPad(canvasSize.width, canvasSize.height);
+        return pad.y + y * (canvasSize.height - pad.y * 2);
+    };
+
+    // Mobile: nodes alternate left-right in a clean zigzag
+    // Even indices (0,2,4) = left side, Odd indices (1,3,5) = right side
+    const getMobileNodeX = (index: number) => index % 2 === 0 ? 0.12 : 0.88;
+    const getMobileNodeY = (index: number) => 0.06 + index * 0.17; // evenly spaced top→bottom
 
     // All path/switch functions require explicit w/h — no closures over canvasSize
     const createCircuitPath = (w: number, h: number) => {
         const points: { x: number; y: number }[] = [];
+        const mobile = w < 640;
 
-        const m1 = { x: computeMapX(milestones[0].x, w), y: computeMapY(milestones[0].y, h) };
-        points.push(m1);
-        points.push({ x: m1.x, y: computeMapY(milestones[1].y, h) });
+        if (mobile) {
+            // Mobile: clean zigzag — horizontal wire then vertical drop, alternating sides
+            for (let i = 0; i < milestones.length; i++) {
+                const nx = computeMapX(getMobileNodeX(i), w);
+                const ny = computeMapY(getMobileNodeY(i), h);
+                points.push({ x: nx, y: ny });
+                if (i < milestones.length - 1) {
+                    const nextNx = computeMapX(getMobileNodeX(i + 1), w);
+                    const nextNy = computeMapY(getMobileNodeY(i + 1), h);
+                    // go horizontal first, then vertical
+                    points.push({ x: nextNx, y: ny });
+                    points.push({ x: nextNx, y: nextNy });
+                }
+            }
+        } else {
+            // Desktop: original zigzag path
+            const m1 = { x: computeMapX(milestones[0].x, w), y: computeMapY(milestones[0].y, h) };
+            points.push(m1);
+            points.push({ x: m1.x, y: computeMapY(milestones[1].y, h) });
 
-        const m2 = { x: computeMapX(milestones[1].x, w), y: computeMapY(milestones[1].y, h) };
-        points.push(m2);
-        points.push({ x: m2.x, y: computeMapY(milestones[2].y, h) });
+            const m2 = { x: computeMapX(milestones[1].x, w), y: computeMapY(milestones[1].y, h) };
+            points.push(m2);
+            points.push({ x: m2.x, y: computeMapY(milestones[2].y, h) });
 
-        const m3 = { x: computeMapX(milestones[2].x, w), y: computeMapY(milestones[2].y, h) };
-        points.push(m3);
+            const m3 = { x: computeMapX(milestones[2].x, w), y: computeMapY(milestones[2].y, h) };
+            points.push(m3);
 
-        const m4Y = computeMapY(milestones[3].y, h);
-        points.push({ x: m3.x, y: m4Y });
-        const m4 = { x: computeMapX(milestones[3].x, w), y: m4Y };
-        points.push(m4);
+            const m4Y = computeMapY(milestones[3].y, h);
+            points.push({ x: m3.x, y: m4Y });
+            const m4 = { x: computeMapX(milestones[3].x, w), y: m4Y };
+            points.push(m4);
 
-        const m5Y = computeMapY(milestones[4].y, h);
-        points.push({ x: m4.x, y: m5Y });
-        const m5 = { x: computeMapX(milestones[4].x, w), y: m5Y };
-        points.push(m5);
+            const m5Y = computeMapY(milestones[4].y, h);
+            points.push({ x: m4.x, y: m5Y });
+            const m5 = { x: computeMapX(milestones[4].x, w), y: m5Y };
+            points.push(m5);
 
-        const m6Y = computeMapY(milestones[5].y, h);
-        points.push({ x: m5.x, y: m6Y });
-        const m6 = { x: computeMapX(milestones[5].x, w), y: m6Y };
-        points.push(m6);
+            const m6Y = computeMapY(milestones[5].y, h);
+            points.push({ x: m5.x, y: m6Y });
+            const m6 = { x: computeMapX(milestones[5].x, w), y: m6Y };
+            points.push(m6);
+        }
 
         return points;
     };
@@ -113,6 +151,7 @@ export default function CircuitTimeline() {
     const getSwitchPositions = (w: number, h: number) => {
         const switches = [];
         const pathPoints = createCircuitPath(w, h);
+        const mobile = w < 640;
 
         let totalLength = 0;
         const segmentLengths: number[] = [];
@@ -126,9 +165,12 @@ export default function CircuitTimeline() {
 
         const milestonePositions: number[] = [];
         for (let m = 0; m < milestones.length; m++) {
-            // Use computeMapX/Y with the SAME w/h so coords exactly match pathPoints
-            const mx = computeMapX(milestones[m].x, w);
-            const my = computeMapY(milestones[m].y, h);
+            const mx = mobile
+                ? computeMapX(getMobileNodeX(m), w)
+                : computeMapX(milestones[m].x, w);
+            const my = mobile
+                ? computeMapY(getMobileNodeY(m), h)
+                : computeMapY(milestones[m].y, h);
 
             let accLength = 0;
             for (let i = 0; i < pathPoints.length; i++) {
@@ -186,6 +228,7 @@ export default function CircuitTimeline() {
             const height = window.innerHeight;
 
             setCanvasSize({ width, height });
+            setIsMobile(width < 640);
 
             canvas.width = width * dpr;
             canvas.height = height * dpr;
@@ -234,6 +277,27 @@ export default function CircuitTimeline() {
         };
 
         canvas.addEventListener('click', handleCanvasClick);
+
+        const handleCanvasTouch = (e: TouchEvent) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            const rect = canvas.getBoundingClientRect();
+            const liveW = parseInt(canvas.style.width);
+            const liveH = parseInt(canvas.style.height);
+            const touchX = (touch.clientX - rect.left) * (liveW / rect.width);
+            const touchY = (touch.clientY - rect.top) * (liveH / rect.height);
+            const switches = getSwitchPositions(liveW, liveH);
+            switches.forEach((sw) => {
+                const dx = touchX - sw.x;
+                const dy = touchY - sw.y;
+                if (Math.sqrt(dx * dx + dy * dy) <= 44) {
+                    switchStatesRef.current[sw.id] = !switchStatesRef.current[sw.id];
+                    setRenderTrigger(prev => prev + 1);
+                }
+            });
+        };
+
+        canvas.addEventListener('touchend', handleCanvasTouch, { passive: false });
         canvas.style.cursor = 'pointer';
 
         handleScroll();
@@ -272,9 +336,14 @@ export default function CircuitTimeline() {
                     firstDisabledSwitchProgress = switches[i].progress;
 
                     // Find the milestone before this switch using live width/height
+                    const isMobileAnim = width < 640;
                     for (let m = milestones.length - 1; m >= 0; m--) {
-                        const mx = computeMapX(milestones[m].x, width);
-                        const my = computeMapY(milestones[m].y, height);
+                        const mx = isMobileAnim
+                            ? computeMapX(getMobileNodeX(m), width)
+                            : computeMapX(milestones[m].x, width);
+                        const my = isMobileAnim
+                            ? computeMapY(getMobileNodeY(m), height)
+                            : computeMapY(milestones[m].y, height);
 
                         let milestoneLength = 0;
                         for (let p = 0; p < pathPoints.length; p++) {
@@ -472,9 +541,14 @@ export default function CircuitTimeline() {
             });
 
             // Draw nodes — use computeMapX/Y with live width/height
+            const isMobileCanvas = width < 640;
             milestones.forEach((milestone, index) => {
-                const x = computeMapX(milestone.x, width);
-                const y = computeMapY(milestone.y, height);
+                const x = isMobileCanvas
+                    ? computeMapX(getMobileNodeX(index), width)
+                    : computeMapX(milestone.x, width);
+                const y = isMobileCanvas
+                    ? computeMapY(getMobileNodeY(index), height)
+                    : computeMapY(milestone.y, height);
 
                 let milestoneReached = false;
                 let milestoneLength = 0;
@@ -581,6 +655,7 @@ export default function CircuitTimeline() {
             window.removeEventListener("scroll", handleScroll);
             window.removeEventListener("resize", resizeCanvas);
             canvas.removeEventListener('click', handleCanvasClick);
+            canvas.removeEventListener('touchend', handleCanvasTouch);
             cancelAnimationFrame(animationFrame);
         };
     }, [scrollProgress, canvasSize.width, canvasSize.height, renderTrigger]);
@@ -617,8 +692,9 @@ export default function CircuitTimeline() {
                 {/* Heading fixed at top with z-index above canvas */}
                 <div className="absolute top-0 left-0 right-0 flex justify-center pt-8" style={{ zIndex: 10 }}>
                     <h2
-                        className="text-center text-5xl md:text-6xl font-bold tracking-[0.25em] uppercase"
+                        className="text-center font-bold uppercase tracking-[0.15em] sm:tracking-[0.25em] px-4"
                         style={{
+                            fontSize: "clamp(1.2rem, 4vw, 3.75rem)",
                             color: scrollProgress > 0.05 ? "#FFD700" : "#888",
                             textShadow: scrollProgress > 0.05 ? "0 0 50px rgba(255,215,0,0.5)" : "none",
                             transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -636,15 +712,54 @@ export default function CircuitTimeline() {
                             const isActive = isMilestoneActive(index);
                             const intensity = isActive ? 1 : 0;
 
-                            const nodeX = mapX(milestone.x);
-                            const nodeY = mapY(milestone.y);
+                            // Use mobile node positions when on mobile
+                            const nodeX = isMobile
+                                ? mapX(getMobileNodeX(index))
+                                : mapX(milestone.x);
+                            const nodeY = isMobile
+                                ? mapY(getMobileNodeY(index))
+                                : mapY(milestone.y);
 
-                            let textLeft = nodeX;
-                            if (milestone.x < 0.4) {
-                                textLeft = nodeX - 180;
+                            // Label width
+                            const labelW = isMobile
+                                ? canvasSize.width * 0.36
+                                : Math.min(220, canvasSize.width * 0.18);
+
+                            // Font scales with viewport width
+                            const yearSize  = isMobile ? "clamp(0.6rem, 3vw, 0.78rem)"  : "clamp(0.85rem, 1.2vw, 1.1rem)";
+                            const titleSize = isMobile ? "clamp(0.55rem, 2.6vw, 0.7rem)" : "clamp(0.75rem, 1vw, 1rem)";
+                            const locSize   = isMobile ? "clamp(0.5rem, 2.3vw, 0.65rem)" : "clamp(0.65rem, 0.9vw, 0.875rem)";
+                            const dateSize  = isMobile ? "clamp(0.45rem, 2vw, 0.58rem)"  : "clamp(0.6rem, 0.8vw, 0.75rem)";
+
+                            // Estimated label height in px (4 lines × ~14px each)
+                            const labelH = isMobile ? 56 : 70;
+                            const nodeR = 18; // node radius
+                            const gap = 8;
+
+                            let textLeft: number;
+                            let textTop: number;
+
+                            if (isMobile) {
+                                // Left nodes (even): label centered on node horizontally, above the node
+                                // Right nodes (odd): label centered on node horizontally, below the node
+                                const isLeft = index % 2 === 0;
+                                textLeft = nodeX - labelW / 2;
+                                textTop = isLeft
+                                    ? nodeY - nodeR - gap - labelH   // above
+                                    : nodeY + nodeR + gap;            // below
                             } else {
-                                textLeft = nodeX + 50;
+                                // Desktop: label left or right of node
+                                const gap20 = 20;
+                                if (milestone.x < 0.4) {
+                                    textLeft = nodeX - labelW - gap20;
+                                } else {
+                                    textLeft = nodeX + gap20;
+                                }
+                                textTop = nodeY - 25;
                             }
+
+                            // Clamp horizontally so label never exits screen
+                            textLeft = Math.max(4, Math.min(textLeft, canvasSize.width - labelW - 4));
 
                             return (
                                 <div
@@ -652,15 +767,18 @@ export default function CircuitTimeline() {
                                     className="absolute pointer-events-none"
                                     style={{
                                         left: `${textLeft}px`,
-                                        top: `${nodeY - 25}px`,
+                                        top: `${textTop}px`,
                                         transition: "opacity 0.4s ease",
-                                        width: "240px"
+                                        width: `${labelW}px`,
                                     }}
                                 >
                                     <div className="flex flex-col">
                                         <span
-                                            className="text-xl font-bold tracking-wider mb-1"
                                             style={{
+                                                fontSize: yearSize,
+                                                fontWeight: "bold",
+                                                letterSpacing: "0.05em",
+                                                marginBottom: "0.15em",
                                                 color: isActive ? `rgba(255, 215, 0, ${intensity})` : "#888",
                                                 textShadow: isActive ? `0 0 ${20 * intensity}px rgba(255,255,150,${intensity * 0.6}), 0 0 ${40 * intensity}px rgba(255,255,150,${intensity * 0.7})` : "none",
                                                 fontFamily: "system-ui, -apple-system, sans-serif",
@@ -670,8 +788,10 @@ export default function CircuitTimeline() {
                                             {milestone.year}
                                         </span>
                                         <span
-                                            className="text-base font-semibold mb-1"
                                             style={{
+                                                fontSize: titleSize,
+                                                fontWeight: "600",
+                                                marginBottom: "0.15em",
                                                 color: isActive ? `rgba(255, 240, 180, ${0.95 * intensity})` : "#888",
                                                 transition: "all 0.3s ease",
                                                 lineHeight: "1.3"
@@ -680,8 +800,8 @@ export default function CircuitTimeline() {
                                             {milestone.title}
                                         </span>
                                         <span
-                                            className="text-sm"
                                             style={{
+                                                fontSize: locSize,
                                                 color: isActive ? `rgba(180, 180, 180, ${0.85 + intensity * 0.15})` : "#888",
                                                 transition: "all 0.3s ease",
                                                 lineHeight: "1.4"
@@ -691,8 +811,9 @@ export default function CircuitTimeline() {
                                         </span>
                                         {milestone.date && (
                                             <span
-                                                className="text-xs mt-1"
                                                 style={{
+                                                    fontSize: dateSize,
+                                                    marginTop: "0.2em",
                                                     color: isActive ? `rgba(150, 150, 150, ${0.75 + intensity * 0.25})` : "#888",
                                                     transition: "all 0.3s ease"
                                                 }}
