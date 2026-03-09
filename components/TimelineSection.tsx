@@ -224,11 +224,14 @@ export default function CircuitTimeline() {
         const dpr = window.devicePixelRatio || 1;
 
         const resizeCanvas = () => {
-            const width = window.innerWidth;
+            const width = document.documentElement.clientWidth || window.innerWidth;
             const height = window.innerHeight;
 
-            setCanvasSize({ width, height });
-            setIsMobile(width < 640);
+            setCanvasSize(prev => {
+                if (prev.width === width && prev.height === height) return prev;
+                return { width, height };
+            });
+            setIsMobile(prev => prev === (width < 640) ? prev : (width < 640));
 
             canvas.width = width * dpr;
             canvas.height = height * dpr;
@@ -243,15 +246,21 @@ export default function CircuitTimeline() {
             const rect = section.getBoundingClientRect();
             const windowHeight = window.innerHeight;
 
+            // On mobile, the URL bar hiding/showing changes innerHeight without always firing resize
+            // We must update the canvas size dynamically if it doesn't match windowHeight
+            if (canvas && parseInt(canvas.style.height) !== windowHeight && !isNaN(parseInt(canvas.style.height))) {
+                resizeCanvas();
+            }
+
             if (rect.top <= 0 && rect.bottom > windowHeight) {
                 const scrolledPastTop = -rect.top;
                 const sectionScrollHeight = rect.height - windowHeight;
                 const progress = Math.max(0, Math.min(1, scrolledPastTop / sectionScrollHeight));
-                setScrollProgress(progress);
+                setScrollProgress(prev => Math.abs(prev - progress) < 0.0001 ? prev : progress);
             } else if (rect.top > 0) {
-                setScrollProgress(0);
+                setScrollProgress(prev => prev === 0 ? prev : 0);
             } else if (rect.bottom <= windowHeight) {
-                setScrollProgress(1);
+                setScrollProgress(prev => prev === 1 ? prev : 1);
             }
         };
 
@@ -726,10 +735,10 @@ export default function CircuitTimeline() {
                                 : Math.min(220, canvasSize.width * 0.18);
 
                             // Font scales with viewport width
-                            const yearSize  = isMobile ? "clamp(0.6rem, 3vw, 0.78rem)"  : "clamp(0.85rem, 1.2vw, 1.1rem)";
+                            const yearSize = isMobile ? "clamp(0.6rem, 3vw, 0.78rem)" : "clamp(0.85rem, 1.2vw, 1.1rem)";
                             const titleSize = isMobile ? "clamp(0.55rem, 2.6vw, 0.7rem)" : "clamp(0.75rem, 1vw, 1rem)";
-                            const locSize   = isMobile ? "clamp(0.5rem, 2.3vw, 0.65rem)" : "clamp(0.65rem, 0.9vw, 0.875rem)";
-                            const dateSize  = isMobile ? "clamp(0.45rem, 2vw, 0.58rem)"  : "clamp(0.6rem, 0.8vw, 0.75rem)";
+                            const locSize = isMobile ? "clamp(0.5rem, 2.3vw, 0.65rem)" : "clamp(0.65rem, 0.9vw, 0.875rem)";
+                            const dateSize = isMobile ? "clamp(0.45rem, 2vw, 0.58rem)" : "clamp(0.6rem, 0.8vw, 0.75rem)";
 
                             // Estimated label height in px (4 lines × ~14px each)
                             const labelH = isMobile ? 56 : 70;

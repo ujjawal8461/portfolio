@@ -30,11 +30,11 @@ export default function HeroSection() {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    useEffect(() => {
-    if (isLightOn) {
-        document.body.style.overflow = "";
-    }
-}, [isLightOn]);
+    //     useEffect(() => {
+    //     if (isLightOn) {
+    //         document.body.style.overflow = "";
+    //     }
+    // }, [isLightOn]);
 
     useEffect(() => {
         const canvas = canvasRef.current!;
@@ -201,7 +201,6 @@ export default function HeroSection() {
         };
 
         const handlePointerDown = (e: MouseEvent | TouchEvent) => {
-            e.preventDefault();
             const { x: clientX, y: clientY } = getPointerPosition(e);
             const touchTargetRadius = params.isMobileView ? 50 : 30;
 
@@ -210,6 +209,7 @@ export default function HeroSection() {
             const switchDistance = Math.sqrt(switchDx * switchDx + switchDy * switchDy);
 
             if (switchDistance <= params.switchRadius + touchTargetRadius) {
+                if (e.cancelable) e.preventDefault();
                 isSwitchDragging = true;
                 switchDragOffsetX = clientX - switchX;
                 switchDragOffsetY = clientY - switchY;
@@ -223,6 +223,7 @@ export default function HeroSection() {
             const distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance <= params.bulbRadius + touchTargetRadius) {
+                if (e.cancelable) e.preventDefault();
                 isDragging = true;
                 dragOffsetX = clientX - bulbX;
                 dragOffsetY = clientY - bulbY;
@@ -634,7 +635,7 @@ export default function HeroSection() {
 
     return (
         <section className="relative w-full h-screen bg-black flex flex-col items-center justify-center overflow-hidden">
-            <canvas ref={canvasRef} className="absolute top-0 left-0 touch-none" />
+            <canvas ref={canvasRef} className="absolute top-0 left-0" style={{ touchAction: 'auto' }} />
 
             <div className="flex flex-col items-center justify-center px-4">
                 <h1
