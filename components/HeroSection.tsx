@@ -31,6 +31,12 @@ export default function HeroSection() {
     }, []);
 
     useEffect(() => {
+    if (isLightOn) {
+        document.body.style.overflow = "";
+    }
+}, [isLightOn]);
+
+    useEffect(() => {
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext("2d")!;
 
