@@ -67,45 +67,52 @@ export default function CircuitTimeline() {
     // Padding so glow never clips at any edge
     const PAD_X = 160;
     const PAD_Y = 120;
+
+    // computeMapX/Y: explicit w/h required — used everywhere inside effect to avoid stale state
+    const computeMapX = (x: number, w: number) => PAD_X + x * (w - PAD_X * 2);
+    const computeMapY = (y: number, h: number) => PAD_Y + y * (h - PAD_Y * 2);
+
+    // mapX/mapY: uses canvasSize state — only used in React render (JSX), never inside useEffect
     const mapX = (x: number) => PAD_X + x * (canvasSize.width - PAD_X * 2);
     const mapY = (y: number) => PAD_Y + y * (canvasSize.height - PAD_Y * 2);
 
-    const createCircuitPath = () => {
+    // All path/switch functions require explicit w/h — no closures over canvasSize
+    const createCircuitPath = (w: number, h: number) => {
         const points: { x: number; y: number }[] = [];
 
-        const m1 = { x: mapX(milestones[0].x), y: mapY(milestones[0].y) };
+        const m1 = { x: computeMapX(milestones[0].x, w), y: computeMapY(milestones[0].y, h) };
         points.push(m1);
-        points.push({ x: m1.x, y: mapY(milestones[1].y) });
+        points.push({ x: m1.x, y: computeMapY(milestones[1].y, h) });
 
-        const m2 = { x: mapX(milestones[1].x), y: mapY(milestones[1].y) };
+        const m2 = { x: computeMapX(milestones[1].x, w), y: computeMapY(milestones[1].y, h) };
         points.push(m2);
-        points.push({ x: m2.x, y: mapY(milestones[2].y) });
+        points.push({ x: m2.x, y: computeMapY(milestones[2].y, h) });
 
-        const m3 = { x: mapX(milestones[2].x), y: mapY(milestones[2].y) };
+        const m3 = { x: computeMapX(milestones[2].x, w), y: computeMapY(milestones[2].y, h) };
         points.push(m3);
 
-        const m4Y = mapY(milestones[3].y);
+        const m4Y = computeMapY(milestones[3].y, h);
         points.push({ x: m3.x, y: m4Y });
-        const m4 = { x: mapX(milestones[3].x), y: m4Y };
+        const m4 = { x: computeMapX(milestones[3].x, w), y: m4Y };
         points.push(m4);
 
-        const m5Y = mapY(milestones[4].y);
+        const m5Y = computeMapY(milestones[4].y, h);
         points.push({ x: m4.x, y: m5Y });
-        const m5 = { x: mapX(milestones[4].x), y: m5Y };
+        const m5 = { x: computeMapX(milestones[4].x, w), y: m5Y };
         points.push(m5);
 
-        const m6Y = mapY(milestones[5].y);
+        const m6Y = computeMapY(milestones[5].y, h);
         points.push({ x: m5.x, y: m6Y });
-        const m6 = { x: mapX(milestones[5].x), y: m6Y };
+        const m6 = { x: computeMapX(milestones[5].x, w), y: m6Y };
         points.push(m6);
 
         return points;
     };
 
-    // Calculate switch positions (midpoints between milestones)
-    const getSwitchPositions = () => {
+    // getSwitchPositions requires explicit w/h — uses computeMapX/Y consistently
+    const getSwitchPositions = (w: number, h: number) => {
         const switches = [];
-        const pathPoints = createCircuitPath();
+        const pathPoints = createCircuitPath(w, h);
 
         let totalLength = 0;
         const segmentLengths: number[] = [];
@@ -119,8 +126,9 @@ export default function CircuitTimeline() {
 
         const milestonePositions: number[] = [];
         for (let m = 0; m < milestones.length; m++) {
-            const mx = mapX(milestones[m].x);
-            const my = mapY(milestones[m].y);
+            // Use computeMapX/Y with the SAME w/h so coords exactly match pathPoints
+            const mx = computeMapX(milestones[m].x, w);
+            const my = computeMapY(milestones[m].y, h);
 
             let accLength = 0;
             for (let i = 0; i < pathPoints.length; i++) {
@@ -206,10 +214,13 @@ export default function CircuitTimeline() {
 
         const handleCanvasClick = (e: MouseEvent) => {
             const rect = canvas.getBoundingClientRect();
-            const clickX = (e.clientX - rect.left) * (parseInt(canvas.style.width) / rect.width);
-            const clickY = (e.clientY - rect.top) * (parseInt(canvas.style.height) / rect.height);
+            const liveW = parseInt(canvas.style.width);
+            const liveH = parseInt(canvas.style.height);
+            const clickX = (e.clientX - rect.left) * (liveW / rect.width);
+            const clickY = (e.clientY - rect.top) * (liveH / rect.height);
 
-            const switches = getSwitchPositions();
+            const switches = getSwitchPositions(liveW, liveH);
+
             switches.forEach((sw) => {
                 const dx = clickX - sw.x;
                 const dy = clickY - sw.y;
@@ -232,12 +243,13 @@ export default function CircuitTimeline() {
         let animationFrame: number;
 
         const animate = () => {
+            // Read live dimensions from canvas — never use stale canvasSize state
             const width = parseInt(canvas.style.width);
             const height = parseInt(canvas.style.height);
 
             ctx.clearRect(0, 0, width, height);
 
-            const pathPoints = createCircuitPath();
+            const pathPoints = createCircuitPath(width, height);
 
             let totalLength = 0;
             const segmentLengths: number[] = [];
@@ -249,7 +261,7 @@ export default function CircuitTimeline() {
                 totalLength += length;
             }
 
-            const switches = getSwitchPositions();
+            const switches = getSwitchPositions(width, height);
 
             // Find first disabled switch and the node before it
             let firstDisabledSwitchProgress = 1;
@@ -259,10 +271,10 @@ export default function CircuitTimeline() {
                 if (!switchStatesRef.current[i]) {
                     firstDisabledSwitchProgress = switches[i].progress;
 
-                    // Find the milestone that comes before this switch
+                    // Find the milestone before this switch using live width/height
                     for (let m = milestones.length - 1; m >= 0; m--) {
-                        const mx = milestones[m].x * canvasSize.width;
-                        const my = milestones[m].y * canvasSize.height;
+                        const mx = computeMapX(milestones[m].x, width);
+                        const my = computeMapY(milestones[m].y, height);
 
                         let milestoneLength = 0;
                         for (let p = 0; p < pathPoints.length; p++) {
@@ -306,16 +318,13 @@ export default function CircuitTimeline() {
             // Draw path segments with gaps at OFF switches
             ctx.lineWidth = 5;
 
-            // First, draw all inactive segments
             for (let i = 0; i < pathPoints.length - 1; i++) {
                 let segStart = 0;
                 for (let j = 0; j < i; j++) {
                     segStart += segmentLengths[j];
                 }
                 const segEnd = segStart + segmentLengths[i];
-                const segProgress = segStart / totalLength;
 
-                // Check if this segment should have a gap (if there's an OFF switch on it)
                 let hasOffSwitch = false;
                 let gapStart = 0;
                 let gapEnd = 0;
@@ -326,7 +335,7 @@ export default function CircuitTimeline() {
                         if (swPos >= segStart && swPos <= segEnd) {
                             hasOffSwitch = true;
                             const localProgress = (swPos - segStart) / segmentLengths[i];
-                            const gapSize = 25; // pixels
+                            const gapSize = 25;
                             gapStart = localProgress - (gapSize / 2) / segmentLengths[i];
                             gapEnd = localProgress + (gapSize / 2) / segmentLengths[i];
                             break;
@@ -335,7 +344,6 @@ export default function CircuitTimeline() {
                 }
 
                 if (hasOffSwitch) {
-                    // Draw segment before gap
                     if (gapStart > 0) {
                         ctx.beginPath();
                         ctx.strokeStyle = "#888";
@@ -345,8 +353,6 @@ export default function CircuitTimeline() {
                         ctx.lineTo(gapX1, gapY1);
                         ctx.stroke();
                     }
-
-                    // Draw segment after gap
                     if (gapEnd < 1) {
                         ctx.beginPath();
                         ctx.strokeStyle = "#888";
@@ -357,7 +363,6 @@ export default function CircuitTimeline() {
                         ctx.stroke();
                     }
                 } else {
-                    // Draw full segment
                     ctx.beginPath();
                     ctx.strokeStyle = "#888";
                     ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
@@ -366,7 +371,7 @@ export default function CircuitTimeline() {
                 }
             }
 
-            // Draw activated path with glow (stops at OFF switches)
+            // Draw activated path with glow
             if (effectiveProgress > 0) {
                 ctx.strokeStyle = "#FFD700";
                 ctx.lineWidth = 5;
@@ -381,7 +386,6 @@ export default function CircuitTimeline() {
                     }
                     const segEnd = segStart + segmentLengths[i];
 
-                    // Check for OFF switch on this segment
                     let switchOnSegment = -1;
                     for (let s = 0; s < switches.length; s++) {
                         if (!switchStatesRef.current[s]) {
@@ -394,14 +398,12 @@ export default function CircuitTimeline() {
                     }
 
                     if (switchOnSegment !== -1 && drawLength < currentLength) {
-                        // Draw up to the switch, then stop
                         const swPos = switches[switchOnSegment].progress * totalLength;
                         const drawToSwitch = Math.min(currentLength, swPos - 12.5);
 
                         if (drawToSwitch > drawLength) {
                             ctx.beginPath();
                             ctx.moveTo(pathPoints[i].x, pathPoints[i].y);
-
                             const localProgress = (drawToSwitch - segStart) / segmentLengths[i];
                             const x = pathPoints[i].x + (pathPoints[i + 1].x - pathPoints[i].x) * localProgress;
                             const y = pathPoints[i].y + (pathPoints[i + 1].y - pathPoints[i].y) * localProgress;
@@ -430,13 +432,12 @@ export default function CircuitTimeline() {
                 ctx.shadowBlur = 0;
             }
 
-            // Draw switches - circuit diagram style with proper wire thickness
+            // Draw switches
             switches.forEach((sw) => {
                 const isOn = switchStatesRef.current[sw.id];
                 const circleRadius = 8;
                 const lineLength = 20;
 
-                // Left circle (hollow)
                 ctx.beginPath();
                 ctx.arc(sw.x - lineLength, sw.y, circleRadius, 0, Math.PI * 2);
                 ctx.strokeStyle = "#888";
@@ -445,7 +446,6 @@ export default function CircuitTimeline() {
                 ctx.fill();
                 ctx.stroke();
 
-                // Right circle (hollow)
                 ctx.beginPath();
                 ctx.arc(sw.x + lineLength, sw.y, circleRadius, 0, Math.PI * 2);
                 ctx.strokeStyle = "#888";
@@ -454,9 +454,7 @@ export default function CircuitTimeline() {
                 ctx.fill();
                 ctx.stroke();
 
-                // Switch lever line - same thickness as wire (5px)
                 if (isOn) {
-                    // Horizontal line when ON - matches wire thickness
                     ctx.beginPath();
                     ctx.strokeStyle = "#888";
                     ctx.lineWidth = 5;
@@ -464,7 +462,6 @@ export default function CircuitTimeline() {
                     ctx.lineTo(sw.x + lineLength, sw.y);
                     ctx.stroke();
                 } else {
-                    // Angled line when OFF - showing gap/disconnection
                     ctx.beginPath();
                     ctx.strokeStyle = "#888";
                     ctx.lineWidth = 5;
@@ -474,12 +471,10 @@ export default function CircuitTimeline() {
                 }
             });
 
-            // Draw nodes with bulb-like glow
+            // Draw nodes — use computeMapX/Y with live width/height
             milestones.forEach((milestone, index) => {
-                const PAD_X = 160;
-                const PAD_Y = 120;
-                const x = PAD_X + milestone.x * (canvasSize.width - PAD_X * 2);
-                const y = PAD_Y + milestone.y * (canvasSize.height - PAD_Y * 2);
+                const x = computeMapX(milestone.x, width);
+                const y = computeMapY(milestone.y, height);
 
                 let milestoneReached = false;
                 let milestoneLength = 0;
@@ -504,7 +499,6 @@ export default function CircuitTimeline() {
                     const pulseTime = Date.now() / 1000;
                     const pulse = Math.sin(pulseTime * 2 + index) * 0.15 + 0.85;
 
-                    // Large outer glow
                     const glowRadius = nodeRadius * 8;
                     const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
                     gradient.addColorStop(0, `rgba(255, 240, 150, ${pulse * 0.5})`);
@@ -519,7 +513,6 @@ export default function CircuitTimeline() {
                     ctx.fill();
                 }
 
-                // Main node circle
                 ctx.beginPath();
                 ctx.arc(x, y, nodeRadius, 0, Math.PI * 2);
 
@@ -592,12 +585,11 @@ export default function CircuitTimeline() {
         };
     }, [scrollProgress, canvasSize.width, canvasSize.height, renderTrigger]);
 
-    // Calculate if milestone should be active based on switches
+    // isMilestoneActive runs during React render — canvasSize state is correct here
     const isMilestoneActive = (index: number) => {
-        const switches = getSwitchPositions();
+        const switches = getSwitchPositions(canvasSize.width, canvasSize.height);
         const milestoneProgress = index / (milestones.length - 1);
 
-        // Check if any switch before this milestone is off
         for (let i = 0; i < switches.length; i++) {
             if (switches[i].progress < milestoneProgress * 0.95) {
                 if (!switchStatesRef.current[i]) {
@@ -618,7 +610,7 @@ export default function CircuitTimeline() {
             <div className="sticky top-0 h-screen" style={{ position: "sticky" }}>
 
                 {/* Canvas absolutely fills full screen so glow never clips */}
-                <div className="absolute inset-0 flex justify-center items-center" style={{ zIndex: 1 }}>
+                <div className="absolute inset-0 flex justify-center items-center" style={{ zIndex: 10 }}>
                     <canvas ref={canvasRef} />
                 </div>
 
@@ -638,14 +630,14 @@ export default function CircuitTimeline() {
                 </div>
 
                 {/* Milestone labels absolutely positioned over canvas */}
-                <div className="absolute inset-0 flex justify-center items-center" style={{ zIndex: 5 }}>
+                <div className="absolute inset-0 flex justify-center items-center" style={{ zIndex: 5, pointerEvents: "none" }}>
                     <div className="relative" style={{ width: canvasSize.width, height: canvasSize.height }}>
                         {milestones.map((milestone, index) => {
                             const isActive = isMilestoneActive(index);
                             const intensity = isActive ? 1 : 0;
 
-                            const nodeX = PAD_X + milestone.x * (canvasSize.width - PAD_X * 2);
-                            const nodeY = PAD_Y + milestone.y * (canvasSize.height - PAD_Y * 2);
+                            const nodeX = mapX(milestone.x);
+                            const nodeY = mapY(milestone.y);
 
                             let textLeft = nodeX;
                             if (milestone.x < 0.4) {
