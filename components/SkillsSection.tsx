@@ -76,25 +76,33 @@ const ICON_SKILLS: Pick<SkillItem, "id" | "name" | "Icon" | "categories">[] = [
 ];
 
 // ─── Overlap-free grid layout ─────────────────────────────────────────────────
-function buildLayout(): SkillItem[] {
+function buildLayout(isMobile = false): SkillItem[] {
     let seed = 137;
     const rand = () => {
         seed = (seed * 1664525 + 1013904223) & 0xffffffff;
         return (seed >>> 0) / 0xffffffff;
     };
 
-    // Tightened: 8–92% range, wider center reserve
-    const COLS = 14;
-    const ROWS = 10;
+    const COLS = isMobile ? 6 : 14;
+    const ROWS = isMobile ? 12 : 10;
     const cells: { x: number; y: number }[] = [];
 
     for (let row = 0; row < ROWS; row++) {
         for (let col = 0; col < COLS; col++) {
-            // CHANGED: x range 8–92 (was 3–97), y range 8–92 (was 4–96)
-            const x = 3 + (col / (COLS - 1)) * 94;
-            const y = 8 + (row / (ROWS - 1)) * 84;
-            // CHANGED: wider center band x 26–74 (was 28–72), y 20–78 (was 22–76)
-            if (x > 26 && x < 74 && y > 20 && y < 78) continue;
+            const x = isMobile
+                ? 10 + (col / (COLS - 1)) * 80   // 10% to 90%
+                : 3 + (col / (COLS - 1)) * 94;
+            const y = isMobile
+                ? 5 + (row / (ROWS - 1)) * 90   // 5% to 95%
+                : 8 + (row / (ROWS - 1)) * 84;
+
+            if (isMobile) {
+                // Wider center band excluded for mobile 
+                // x > 20 and x < 80, y > 22 and y < 78
+                if (x > 20 && x < 80 && y > 22 && y < 78) continue;
+            } else {
+                if (x > 26 && x < 74 && y > 20 && y < 78) continue;
+            }
             cells.push({ x, y });
         }
     }
@@ -111,23 +119,25 @@ function buildLayout(): SkillItem[] {
 
     return allRaw.map((skill, i) => {
         const cell = cells[i % cells.length];
-        const jitterX = (rand() - 0.5) * 3;
-        const jitterY = (rand() - 0.5) * 3;
-        const size = 28 + Math.floor(rand() * 18);
+        const jitterX = (rand() - 0.5) * (isMobile ? 2 : 3);
+        const jitterY = (rand() - 0.5) * (isMobile ? 2 : 3);
+        const size = isMobile
+            ? 16 + Math.floor(rand() * 10)   // smaller sizes for mobile (16 - 25)
+            : 28 + Math.floor(rand() * 18); // default desktop (28 - 45)
         const rotate = (rand() - 0.5) * 16;
 
         return {
             ...skill,
-            // CHANGED: clamp to 8–92 (was 2–97)
-            x: Math.max(2, Math.min(97, cell.x + jitterX)),
-            y: Math.max(2, Math.min(97, cell.y + jitterY)),
+            x: Math.max(2, Math.min(98, cell.x + jitterX)),
+            y: Math.max(2, Math.min(98, cell.y + jitterY)),
             size,
             rotate,
         } as SkillItem;
     });
 }
 
-const skills: SkillItem[] = buildLayout();
+const desktopSkills: SkillItem[] = buildLayout(false);
+const mobileSkills: SkillItem[] = buildLayout(true);
 
 const categories: { key: Category; label: string }[] = [
     { key: "language", label: "Language" },
@@ -140,6 +150,17 @@ const categories: { key: Category; label: string }[] = [
 ];
 
 export default function SkillsSection() {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        handleResize(); // initialize correctly
+        window.addEventListener("resize", handleResize, { passive: true });
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const skills = isMobile ? mobileSkills : desktopSkills;
+
     const [activeCategory, setActiveCategory] = useState<Category>("all");
     const [lockedCategory, setLockedCategory] = useState<Category>("all");
     const [hoveredSkill, setHoveredSkill] = useState<number | null>(null);
@@ -327,35 +348,27 @@ export default function SkillsSection() {
 
                 {/* ── Skill name display strip ── */}
                 <div
-                className="z-10 absolute flex flex-wrap justify-center items-center gap-2 px-6"
-                style={{
-                    top: "58%",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    maxWidth: "680px"
-                }}
+                    className="z-10 absolute flex flex-wrap justify-center items-center gap-2 px-6"
+                    style={{
+                        top: "59%",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        maxWidth: "680px"
+                    }}
                 >
-                 {effectiveCategory !== "all"
+                    {effectiveCategory !== "all"
                         ? skills
                             .filter((sk) => sk.categories.includes(effectiveCategory))
                             .map((sk) => (
                                 <span
                                     key={sk.id}
                                     style={{
-                                            fontSize: "11px",
+                                        fontSize: "11px",
                                         fontWeight: 700,
                                         letterSpacing: "0.12em",
                                         textTransform: "uppercase",
                                         color: "#FFD700",
 
-                                        padding: "6px 14px",
-                                        borderRadius: "8px",
-
-                                        border: "1px solid rgba(255,215,0,0.6)",
-                                        background: "rgba(255,215,0,0.08)",
-
-                                        boxShadow: "0 0 12px rgba(255,215,0,0.35)",
-                                        
                                         display: "inline-block",
                                         margin: "4px",
 
