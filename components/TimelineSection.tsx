@@ -582,12 +582,15 @@ export default function CircuitTimeline() {
                     const pulseTime = Date.now() / 1000;
                     const pulse = Math.sin(pulseTime * 2 + index) * 0.15 + 0.85;
 
-                    const glowRadius = nodeRadius * 8;
+                    const glowMod = isMobileCanvas ? 4 : 6;
+                    const glowRadius = nodeRadius * glowMod;
+
                     const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
-                    gradient.addColorStop(0, `rgba(255, 240, 150, ${pulse * 0.5})`);
-                    gradient.addColorStop(0.2, `rgba(255, 220, 120, ${pulse * 0.4})`);
-                    gradient.addColorStop(0.5, `rgba(255, 200, 100, ${pulse * 0.25})`);
-                    gradient.addColorStop(0.8, `rgba(255, 180, 80, ${pulse * 0.1})`);
+                    const alphaMod = isMobileCanvas ? 0.5 : 0.75;
+                    gradient.addColorStop(0, `rgba(255, 240, 150, ${pulse * 0.5 * alphaMod})`);
+                    gradient.addColorStop(0.2, `rgba(255, 220, 120, ${pulse * 0.4 * alphaMod})`);
+                    gradient.addColorStop(0.5, `rgba(255, 200, 100, ${pulse * 0.25 * alphaMod})`);
+                    gradient.addColorStop(0.8, `rgba(255, 180, 80, ${pulse * 0.1 * alphaMod})`);
                     gradient.addColorStop(1, `rgba(255, 160, 60, 0)`);
 
                     ctx.beginPath();
@@ -604,14 +607,15 @@ export default function CircuitTimeline() {
                     const pulse = Math.sin(pulseTime * 2 + index) * 0.2 + 0.8;
 
                     const bulbGradient = ctx.createRadialGradient(x, y, 0, x, y, nodeRadius);
-                    bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${pulse * 1.0})`);
-                    bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${pulse * 0.8})`);
-                    bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${pulse * 0.6})`);
+                    const alphaMod = isMobileCanvas ? 0.8 : 0.9;
+                    bulbGradient.addColorStop(0, `rgba(255, 245, 180, ${pulse * 1.0 * alphaMod})`);
+                    bulbGradient.addColorStop(0.7, `rgba(255, 215, 0, ${pulse * 0.8 * alphaMod})`);
+                    bulbGradient.addColorStop(1, `rgba(255, 180, 0, ${pulse * 0.6 * alphaMod})`);
                     ctx.fillStyle = bulbGradient;
                     ctx.fill();
 
-                    ctx.shadowBlur = 40 * pulse;
-                    ctx.shadowColor = "rgba(255, 215, 0, 0.9)";
+                    ctx.shadowBlur = (isMobileCanvas ? 15 : 25) * pulse;
+                    ctx.shadowColor = isMobileCanvas ? "rgba(255, 215, 0, 0.5)" : "rgba(255, 215, 0, 0.75)";
                     ctx.strokeStyle = "#FFFFFF";
                     ctx.lineWidth = 2;
                     ctx.stroke();
