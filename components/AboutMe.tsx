@@ -216,7 +216,7 @@ export default function AboutSection() {
                         </div>
                     </div>
                     <div className="flex gap-2 pt-3" style={{ borderTop: "1px solid rgba(255,215,0,0.08)" }}>
-                        <a href="/resume_ujjawal_solanki.pdf" download
+                        <a href="/resume.pdf" download
                             className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold tracking-widest uppercase transition-all duration-300 flex-1"
                             style={{ background: "rgba(255,215,0,0.08)", border: "2px solid rgba(255,215,0,0.7)", color: "#FFD700", textDecoration: "none", fontSize: "10px", whiteSpace: "nowrap" }}
                             onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 0 30px rgba(255,215,0,0.35)"; }}
@@ -224,7 +224,7 @@ export default function AboutSection() {
                         >
                             <DownloadIcon /> Download Resume
                         </a>
-                        <a href="resume_ujjawal_solanki.pdf" target="_blank" rel="noopener noreferrer"
+                        <a href="resume.pdf" target="_blank" rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold tracking-widest uppercase transition-all duration-300 flex-1"
                             style={{ border: "2px solid rgba(255,215,0,0.3)", color: "rgba(255,215,0,0.8)", textDecoration: "none", fontSize: "10px", whiteSpace: "nowrap" }}
                             onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,215,0,0.06)"; }}
